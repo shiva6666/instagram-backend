@@ -4,6 +4,17 @@ A modular-monolith Instagram-style backend built with FastAPI. PostgreSQL is the
 source of truth; Redis and the local infrastructure stack support later roadmap
 phases.
 
+## Repository layout
+
+- `app/` — Python and FastAPI application source code.
+- `infra/` — configuration for local infrastructure, including Prometheus and
+  Grafana.
+- `docs/` — project documentation; add personal notes in
+  [`docs/learnings/`](docs/learnings/).
+- `scripts/` — helper commands, when the project includes them.
+- [`docker-compose.yml`](docker-compose.yml) — connects the API with the
+  database, cache, file storage, event broker, and monitoring services.
+
 ## Requirements
 
 - Python 3.12+
