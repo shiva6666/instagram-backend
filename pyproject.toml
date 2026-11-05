@@ -26,6 +26,7 @@ dev = [
     "pre-commit>=3.7",
     "pytest>=8.0",
     "ruff>=0.3",
+    "faker>=37.0",
 ]
 
 [tool.setuptools.packages.find]

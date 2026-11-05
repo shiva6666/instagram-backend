@@ -142,11 +142,12 @@ Rule: modules talk to each other through a small `service.py` interface only, ne
 
 **Read:** DDIA: reliability/scalability/maintainability, data models and query languages. Xu Vol 1: *Scale From Zero to Millions*, *Back-of-the-Envelope Estimation*.
 
-- [ ] Write `docs/estimation.md`: DAU, posts/day, avg followers, read:write ratio, storage/year, peak QPS, timeline memory in Redis
-- [ ] Draw ER diagram: users, posts, media, follows, likes, comments, notifications
-- [ ] Write Alembic migration 001 (users, posts, follows) with proper constraints and FKs
+- [x] Write `docs/estimation.md`: DAU, posts/day, avg followers, read:write ratio, storage/year, peak QPS, timeline memory in Redis
+- [x] Draw ER diagram: users, posts, media, follows, likes, comments, notifications
+- [x ] Write Alembic migration 001 (users, posts, follows) with proper constraints and FKs
 - [ ] Decide ID strategy (UUIDv7 or snowflake-style) and write an ADR (links to Xu *Unique ID Generator*)
-- [ ] Add indexes you can justify: `(author_id, created_at DESC)`, follows `(follower_id)` and `(followee_id)`
+- [ ] Add indexes you can justify: `posts(user_id, created_at, id)`, `follows(follower_id, created_at)`, and `follows(following_id, created_at)`
+- [ ] Add integrity constraints: unique auth provider identity, no self-follow/block, unique media position, and notification reference checks
 - [ ] Write a seed script (Faker): 10k users, 1M posts, power-law follower counts
 - [ ] Repository + service pattern for `users` module with unit tests
 
@@ -158,7 +159,7 @@ Rule: modules talk to each other through a small `service.py` interface only, ne
 
 **Read:** DDIA: encoding and evolution (schema evolution, forward/backward compatibility).
 
-- [ ] Register, login, refresh, logout endpoints (argon2 hashing, JWT access + refresh rotation)
+- [ ] Register, login, refresh, logout endpoints (`AUTH_IDENTITIES`, Argon2 hashing, JWT access + refresh rotation through `REFRESH_TOKENS`)
 - [ ] Auth dependency (`get_current_user`) and owner-only permission checks
 - [ ] User profile GET/PATCH, avatar placeholder field
 - [ ] Posts: create, get, delete (soft delete), list by author
@@ -250,7 +251,7 @@ Rule: modules talk to each other through a small `service.py` interface only, ne
 
 **Read:** DDIA: replication (leaders and followers). Xu Vol 1: *Design a News Feed System*.
 
-- [ ] Redis timeline per user: sorted set `timeline:{user_id}` (score = timestamp, member = post_id), capped at ~800 items
+- [ ] Redis timeline per user: sorted set `timeline:{user_id}` (score = timestamp, member = post_id), capped at ~500 items initially; revise after benchmarks
 - [ ] Fan-out worker: on post READY, fetch followers in batches, `ZADD` via pipeline
 - [ ] Feed read path: `ZREVRANGEBYSCORE` for cursor, then hydrate posts from Postgres (batch fetch, no N+1)
 - [ ] Post-hydration cache (Redis hash or JSON) with TTL and cache-aside

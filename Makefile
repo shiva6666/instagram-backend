@@ -25,4 +25,4 @@ migrate:
 	uv run alembic upgrade head
 
 seed:
-	@echo "No application seed data is defined yet; add seed logic with the first domain model."
+	uv run python scripts/seed.py
