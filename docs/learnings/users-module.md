@@ -155,14 +155,16 @@ async def create_user(self, *, username: str, email: str, bio=None, is_private=F
 - `*` forces keyword-only arguments — prevents swapping `username` and `email` by accident.
 
 ```python
-    normalized_username = username.strip().lower()   # "  Alice  " → "alice"
-    normalized_email    = email.strip().lower()      # " Alice@Example.com " → "alice@example.com"
+normalized_username = username.strip().lower()  # "  Alice  " → "alice"
+normalized_email = email.strip().lower()  # " Alice@Example.com " → "alice@example.com"
 ```
 - Normalization happens in the service, not the API or the database.
 
 ```python
-    if not normalized_username: raise ValueError("username must not be empty")
-    if not normalized_email:    raise ValueError("email must not be empty")
+if not normalized_username:
+    raise ValueError("username must not be empty")
+if not normalized_email:
+    raise ValueError("email must not be empty")
 ```
 - Guards against whitespace-only strings becoming empty after stripping.
 
@@ -232,14 +234,17 @@ class FakeUserRepository:
         self.users: dict[UUID, User] = {}
 
     async def add(self, user: User) -> User:
-        if any(u.username == user.username or u.email == user.email
-               for u in self.users.values()):
+        if any(
+            u.username == user.username or u.email == user.email
+            for u in self.users.values()
+        ):
             raise UserAlreadyExistsError
         self.users[user.id] = user
         return user
 
     async def get_by_id(self, user_id: UUID) -> User | None:
         return self.users.get(user_id)
+
     ...
 ```
 
