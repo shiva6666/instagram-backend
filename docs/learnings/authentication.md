@@ -27,6 +27,125 @@ The project is currently a modular monolith with PostgreSQL as its source of tru
 
 A server-side session design backed by Redis or PostgreSQL is also valid. JWT is a deliberate trade-off, not a requirement for distributed systems.
 
+
+## Visual guide
+
+The diagrams below are intentionally conceptual. They show the proposed design, not implemented runtime behavior. GitHub renders these Mermaid blocks inline; the same diagrams were also opened as editable draw.io diagrams during this learning session.
+
+### 2.1 Component architecture
+
+This shows where authentication belongs in the current modular monolith. The auth module validates credentials and establishes the principal; application use cases still enforce authorization.
+
+~~~mermaid
+flowchart LR
+  Client["Browser / Mobile Client"] -->|HTTPS| API["FastAPI API"]
+  API --> DEP["get_current_user"]
+  DEP --> JWT["JWT validation"]
+  JWT --> AUTH["Auth module"]
+  AUTH --> ID["Auth identity"]
+  AUTH --> USER["Users module"]
+  AUTH --> RT["Refresh token service"]
+  ID --> DB[("PostgreSQL")]
+  USER --> DB
+  RT --> DB
+  API --> USE["Application use case"]
+  USE --> POL["Authorization policy"]
+  POL --> DB
+~~~
+
+### 2.2 Login and authenticated request
+
+The password is verified once during login. Later API requests validate the access token and resolve its subject; they do not re-check the password.
+
+~~~mermaid
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant R as Auth Router
+  participant S as Auth Service
+  participant DB as PostgreSQL
+  participant K as JWT Signer
+  C->>R: POST /auth/login
+  R->>S: identifier + password
+  S->>DB: Load auth identity
+  DB-->>S: Password hash + user ID
+  S->>S: Argon2id verify
+  alt Credentials valid
+    S->>DB: Create refresh family + token hash
+    S->>K: Sign short-lived access JWT
+    K-->>S: Access JWT
+    S-->>R: Access + refresh credentials
+    R-->>C: 200 credentials
+  else Invalid credentials
+    S-->>R: Generic authentication failure
+    R-->>C: 401
+  end
+  C->>R: GET /posts with Bearer access JWT
+  R->>K: Verify signature + claims
+  K-->>R: Trusted subject (sub)
+  R->>DB: Resolve active user
+  DB-->>R: User
+  R-->>C: Protected response or 401
+~~~
+
+### 2.3 Refresh-token state machine
+
+Rotation is a one-time state transition. Consuming the old token and creating its successor must happen atomically in one database transaction.
+
+~~~mermaid
+stateDiagram-v2
+  [*] --> Active
+  Active --> Consumed: Valid refresh
+  Consumed --> SuccessorActive: Create successor in same transaction
+  Active --> Expired: expires_at reached
+  Active --> Revoked: Logout or admin action
+  Consumed --> ReuseDetected: Old token presented again
+  ReuseDetected --> FamilyRevoked: Revoke token family
+  SuccessorActive --> Consumed: Next successful refresh
+  SuccessorActive --> Expired: expires_at reached
+  SuccessorActive --> Revoked: Logout or admin action
+  Expired --> [*]
+  Revoked --> [*]
+  FamilyRevoked --> [*]
+~~~
+
+### 2.4 Conceptual persistence model
+
+This ER diagram is a teaching model for the proposed separation between a user profile, one or more authentication identities, and refresh-token sessions. It is not a migration specification; constraints, provider semantics, and exact columns must be finalized before implementation.
+
+~~~mermaid
+erDiagram
+  USER ||--o{ AUTH_IDENTITY : owns
+  USER ||--o{ REFRESH_TOKEN : has
+  AUTH_IDENTITY {
+    uuid id PK
+    uuid user_id FK
+    string provider
+    string identifier_normalized UK
+    string password_hash
+    datetime created_at
+    datetime updated_at
+  }
+  USER {
+    uuid id PK
+    string username UK
+    string email UK
+    string status
+  }
+  REFRESH_TOKEN {
+    uuid id PK
+    uuid user_id FK
+    uuid family_id
+    string token_hash UK
+    datetime created_at
+    datetime expires_at
+    datetime consumed_at
+    datetime revoked_at
+    uuid replaced_by_token_id FK
+  }
+~~~
+
+
 ---
 
 ## 2. Current repository context
