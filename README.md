@@ -17,7 +17,7 @@ phases.
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.15+
 - [uv](https://docs.astral.sh/uv/)
 - Docker Compose
 

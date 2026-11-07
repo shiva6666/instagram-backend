@@ -7,7 +7,7 @@ name = "instagram-backend"
 version = "0.1.0"
 description = "A starter backend built with FastAPI"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.15"
 dependencies = [
     "fastapi>=0.110",
     "sqlalchemy[asyncio]>=2.0",
@@ -37,10 +37,10 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py315"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.15"
 files = ["app"]
 
 [[tool.mypy.overrides]]

@@ -15,7 +15,7 @@ jobs:
           enable-cache: true
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.15"
       - run: uv sync --extra dev --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
