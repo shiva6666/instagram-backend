@@ -17,6 +17,11 @@ Build the backend for a photo-sharing social network where a post travels throug
 
 ## Target system at a glance
 
+The following image is the project's high-level system-design blueprint. It captures the intended end-to-end architecture—from clients and edge traffic through application services, media processing, hybrid feed generation, event streaming, analytics, and operational concerns. It is a target design that we will implement incrementally, not a representation of currently completed functionality.
+
+![Instagram System Design — target architecture](docs/assets/project-image.png)
+
+
 The reference system design is intentionally broader than the first implementation. It is split into independently understandable areas:
 
 | Area | Responsibility | Example technologies |
