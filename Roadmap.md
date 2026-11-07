@@ -145,11 +145,11 @@ Rule: modules talk to each other through a small `service.py` interface only, ne
 - [x] Write `docs/estimation.md`: DAU, posts/day, avg followers, read:write ratio, storage/year, peak QPS, timeline memory in Redis
 - [x] Draw ER diagram: users, posts, media, follows, likes, comments, notifications
 - [x ] Write Alembic migration 001 (users, posts, follows) with proper constraints and FKs
-- [ ] Decide ID strategy (UUIDv7 or snowflake-style) and write an ADR (links to Xu *Unique ID Generator*)
-- [ ] Add indexes you can justify: `posts(user_id, created_at, id)`, `follows(follower_id, created_at)`, and `follows(following_id, created_at)`
-- [ ] Add integrity constraints: unique auth provider identity, no self-follow/block, unique media position, and notification reference checks
-- [ ] Write a seed script (Faker): 10k users, 1M posts, power-law follower counts
-- [ ] Repository + service pattern for `users` module with unit tests
+- [x] Decide ID strategy (UUIDv7 or snowflake-style) and write an ADR (links to Xu *Unique ID Generator*)
+- [x] Add indexes you can justify: `posts(user_id, created_at, id)`, `follows(follower_id, created_at)`, and `follows(following_id, created_at)`
+- [x] Add integrity constraints: unique auth provider identity, no self-follow/block, unique media position, and notification reference checks
+- [x] Write a seed script (Faker): 10k users, 1M posts, power-law follower counts
+- [x] Repository + service pattern for `users` module with unit tests
 
 **Tools:** Alembic, SQLAlchemy, Faker, dbdiagram.io or Mermaid, pgAdmin.
 
