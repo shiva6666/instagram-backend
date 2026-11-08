@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from anyio import to_thread
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
@@ -48,7 +49,7 @@ class AuthService:
         identity = AuthIdentity(
             id=new_uuid7(), user_id=user.id, provider="password",
             provider_subject=normalized_email,
-            password_hash=self._password_hasher.hash(password),
+            password_hash=await to_thread.run_sync(self._password_hasher.hash, password),
             created_at=now, updated_at=now,
         )
         await self._auth_repository.add_identity(identity)
@@ -61,7 +62,9 @@ class AuthService:
             raise InvalidCredentialsError("email or password is incorrect")
         identity, user = account
         try:
-            valid = self._password_hasher.verify(identity.password_hash, password)
+            valid = await to_thread.run_sync(
+                self._password_hasher.verify, identity.password_hash, password
+            )
         except (VerifyMismatchError, VerificationError, InvalidHashError):
             valid = False
         if not valid or user.status != "active" or user.deleted_at is not None:

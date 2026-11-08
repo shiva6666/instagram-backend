@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from sqlalchemy.sql.elements import ColumnElement
+
 from sqlalchemy import DateTime, ForeignKey, String, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -103,7 +105,7 @@ class SqlAlchemyAuthRepository:
         await self._session.flush()
         return _to_identity(row)
 
-    async def _identity_query(self, condition: object) -> tuple[AuthIdentity, User] | None:
+    async def _identity_query(self, condition: ColumnElement[bool]) -> tuple[AuthIdentity, User] | None:
         result = await self._session.execute(
             select(AuthIdentityRow, UserRow)
             .join(UserRow, UserRow.id == AuthIdentityRow.user_id)

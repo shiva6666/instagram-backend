@@ -79,6 +79,8 @@ async def refresh(
         await session.commit()
         raise HTTPException(status_code=401, detail="Refresh token reuse detected") from error
     except InvalidRefreshTokenError as error:
+        # Persist family revocation when the account became unavailable.
+        await session.commit()
         raise HTTPException(status_code=401, detail="Refresh token is invalid") from error
     return _token_response(user, access, refresh_token)
 

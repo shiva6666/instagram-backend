@@ -152,6 +152,22 @@ In another terminal, start PostgreSQL and Redis with:
 docker compose up -d postgres redis
 ```
 
+## Authentication (first implementation)
+
+The password-based auth slice exposes these routes under `/api/v1`:
+
+| Method | Route | Description |
+|---|---|---|
+| POST | `/auth/register` | Create a user, password identity, and initial tokens |
+| POST | `/auth/login` | Verify email/password and issue tokens |
+| POST | `/auth/refresh` | Rotate an opaque refresh token |
+| POST | `/auth/logout` | Revoke the refresh-token family |
+| GET | `/auth/me` | Return the authenticated user's profile |
+
+Set `AUTH_JWT_SECRET` in your local `.env` to a cryptographically random value of at least 32 bytes (for example, generate one with `openssl rand -hex 32`). Never commit the real secret. Apply the new schema with `make migrate`.
+
+Access tokens are short-lived JWTs. Refresh tokens are opaque values; the database stores only their SHA-256 fingerprints. The API currently returns both tokens in JSON, so native clients should keep refresh tokens in Keychain/Keystore. A browser client needs an HttpOnly/Secure/SameSite cookie transport and CSRF protections before production use. See [the authentication implementation notes](docs/learnings/auth-module-implementation.md) for the flow and known hardening gaps.
+
 ## Development checks
 
 ```bash
