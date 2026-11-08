@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -5,23 +7,38 @@ from app.core.config import settings
 from app.modules.auth.dependencies import get_current_user, get_db_session
 from app.modules.auth.repository import SqlAlchemyAuthRepository
 from app.modules.auth.schemas import (
-    LoginRequest, LogoutRequest, MessageResponse, RefreshRequest,
-    RegisterRequest, TokenResponse, UserResponse,
+    LoginRequest,
+    LogoutRequest,
+    MessageResponse,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
 )
 from app.modules.auth.service import (
-    AuthService, InvalidCredentialsError, InvalidRefreshTokenError,
+    AuthService,
+    InvalidCredentialsError,
+    InvalidRefreshTokenError,
     RefreshTokenReuseError,
 )
 from app.modules.users.models import User
-from app.modules.users.repository import SqlAlchemyUserRepository, UserAlreadyExistsError
+from app.modules.users.repository import (
+    SqlAlchemyUserRepository,
+    UserAlreadyExistsError,
+)
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
 def _user_response(user: User) -> UserResponse:
     return UserResponse(
-        id=user.id, username=user.username, email=user.email, bio=user.bio,
-        is_private=user.is_private, status=user.status, created_at=user.created_at,
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        bio=user.bio,
+        is_private=user.is_private,
+        status=user.status,
+        created_at=user.created_at,
     )
 
 
@@ -40,12 +57,16 @@ def _service(session: AsyncSession) -> AuthService:
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
-    payload: RegisterRequest, session: AsyncSession = Depends(get_db_session)
+    payload: RegisterRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> TokenResponse:
     try:
         user, access, refresh = await _service(session).register(
-            username=payload.username, email=str(payload.email), password=payload.password,
-            bio=payload.bio, is_private=payload.is_private,
+            username=payload.username,
+            email=str(payload.email),
+            password=payload.password,
+            bio=payload.bio,
+            is_private=payload.is_private,
         )
     except UserAlreadyExistsError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
@@ -54,7 +75,8 @@ async def register(
 
 @router.post("/login", response_model=TokenResponse)
 async def login(
-    payload: LoginRequest, session: AsyncSession = Depends(get_db_session)
+    payload: LoginRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> TokenResponse:
     try:
         user, access, refresh = await _service(session).login(
@@ -62,7 +84,8 @@ async def login(
         )
     except InvalidCredentialsError as error:
         raise HTTPException(
-            status_code=401, detail="Email or password is incorrect",
+            status_code=401,
+            detail="Email or password is incorrect",
             headers={"WWW-Authenticate": "Bearer"},
         ) from error
     return _token_response(user, access, refresh)
@@ -70,7 +93,8 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
-    payload: RefreshRequest, session: AsyncSession = Depends(get_db_session)
+    payload: RefreshRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> TokenResponse:
     try:
         user, access, refresh_token = await _service(session).refresh(payload.refresh_token)
@@ -87,12 +111,15 @@ async def refresh(
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    payload: LogoutRequest, session: AsyncSession = Depends(get_db_session)
+    payload: LogoutRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> MessageResponse:
     await _service(session).logout(payload.refresh_token)
     return MessageResponse(message="Logged out")
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(user: User = Depends(get_current_user)) -> UserResponse:
+async def me(
+    user: Annotated[User, Depends(get_current_user)],
+) -> UserResponse:
     return _user_response(user)
