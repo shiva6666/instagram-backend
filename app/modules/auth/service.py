@@ -60,7 +60,9 @@ class AuthService:
             user_id=user.id,
             provider="password",
             provider_subject=normalized_email,
-            password_hash=await to_thread.run_sync(self._password_hasher.hash, password),
+            password_hash=await to_thread.run_sync(
+                self._password_hasher.hash, password
+            ),
             created_at=now,
             updated_at=now,
         )
@@ -69,7 +71,9 @@ class AuthService:
         return user, access_token, refresh_token
 
     async def login(self, *, email: str, password: str) -> tuple[User, str, str]:
-        account = await self._auth_repository.get_identity_by_email(email.strip().lower())
+        account = await self._auth_repository.get_identity_by_email(
+            email.strip().lower()
+        )
         if account is None:
             raise InvalidCredentialsError("email or password is incorrect")
         identity, user = account
@@ -77,7 +81,7 @@ class AuthService:
             valid = await to_thread.run_sync(
                 self._password_hasher.verify, identity.password_hash, password
             )
-        except (VerifyMismatchError, VerificationError, InvalidHashError):
+        except VerifyMismatchError, VerificationError, InvalidHashError:
             valid = False
         if not valid or user.status != "active" or user.deleted_at is not None:
             raise InvalidCredentialsError("email or password is incorrect")
@@ -107,7 +111,9 @@ class AuthService:
             raise InvalidRefreshTokenError("account is unavailable")
 
         raw_successor = create_refresh_token()
-        successor = self._new_refresh_token(user.id, stored.family_id, raw_successor, now)
+        successor = self._new_refresh_token(
+            user.id, stored.family_id, raw_successor, now
+        )
         await self._auth_repository.rotate_refresh_token(stored.id, now, successor)
         return user, create_access_token(user.id), raw_successor
 
