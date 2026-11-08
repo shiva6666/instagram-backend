@@ -46,7 +46,9 @@ def upgrade() -> None:
         sa.UniqueConstraint(
             "user_id", "provider", name="auth_identities_user_provider_key"
         ),
-        sa.CheckConstraint("provider IN ('password')", name="auth_identities_provider_check"),
+        sa.CheckConstraint(
+            "provider IN ('password')", name="auth_identities_provider_check"
+        ),
     )
     op.create_table(
         "refresh_tokens",
@@ -77,7 +79,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("token_hash", name="refresh_tokens_token_hash_key"),
     )
     op.create_index("ix_auth_identities_user_id", "auth_identities", ["user_id"])
-    op.create_index("ix_refresh_tokens_user_family", "refresh_tokens", ["user_id", "family_id"])
+    op.create_index(
+        "ix_refresh_tokens_user_family", "refresh_tokens", ["user_id", "family_id"]
+    )
     op.create_index("ix_refresh_tokens_family_id", "refresh_tokens", ["family_id"])
 
 
