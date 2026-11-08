@@ -4,11 +4,10 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy.sql.elements import ColumnElement
-
 from sqlalchemy import DateTime, ForeignKey, String, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.core.db import Base
 from app.modules.auth.models import AuthIdentity, RefreshToken
@@ -18,22 +17,29 @@ from app.modules.users.repository import UserRow, _to_domain
 
 class AuthRepository(Protocol):
     async def add_identity(self, identity: AuthIdentity) -> AuthIdentity: ...
+
     async def get_identity_by_email(
         self, email: str
     ) -> tuple[AuthIdentity, User] | None: ...
+
     async def get_identity_by_user_id(
         self, user_id: UUID
     ) -> tuple[AuthIdentity, User] | None: ...
+
     async def add_refresh_token(self, token: RefreshToken) -> None: ...
+
     async def get_refresh_token_for_update(
         self, token_hash: str
     ) -> RefreshToken | None: ...
+
     async def rotate_refresh_token(
         self, old_token_id: UUID, consumed_at: datetime, new_token: RefreshToken
     ) -> None: ...
+
     async def revoke_refresh_family(
         self, family_id: UUID, revoked_at: datetime
     ) -> None: ...
+
     async def revoke_refresh_token_hash(
         self, token_hash: str, revoked_at: datetime
     ) -> UUID | None: ...
@@ -73,18 +79,27 @@ class RefreshTokenRow(Base):
 
 def _to_identity(row: AuthIdentityRow) -> AuthIdentity:
     return AuthIdentity(
-        id=row.id, user_id=row.user_id, provider=row.provider,
-        provider_subject=row.provider_subject, password_hash=row.password_hash,
-        created_at=row.created_at, updated_at=row.updated_at,
+        id=row.id,
+        user_id=row.user_id,
+        provider=row.provider,
+        provider_subject=row.provider_subject,
+        password_hash=row.password_hash,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
     )
 
 
 def _to_refresh_token(row: RefreshTokenRow) -> RefreshToken:
     return RefreshToken(
-        id=row.id, user_id=row.user_id, family_id=row.family_id,
-        token_hash=row.token_hash, created_at=row.created_at,
-        expires_at=row.expires_at, consumed_at=row.consumed_at,
-        revoked_at=row.revoked_at, replaced_by_token_id=row.replaced_by_token_id,
+        id=row.id,
+        user_id=row.user_id,
+        family_id=row.family_id,
+        token_hash=row.token_hash,
+        created_at=row.created_at,
+        expires_at=row.expires_at,
+        consumed_at=row.consumed_at,
+        revoked_at=row.revoked_at,
+        replaced_by_token_id=row.replaced_by_token_id,
     )
 
 
@@ -96,16 +111,21 @@ class SqlAlchemyAuthRepository:
 
     async def add_identity(self, identity: AuthIdentity) -> AuthIdentity:
         row = AuthIdentityRow(
-            id=identity.id, user_id=identity.user_id, provider=identity.provider,
+            id=identity.id,
+            user_id=identity.user_id,
+            provider=identity.provider,
             provider_subject=identity.provider_subject,
-            password_hash=identity.password_hash, created_at=identity.created_at,
+            password_hash=identity.password_hash,
+            created_at=identity.created_at,
             updated_at=identity.updated_at,
         )
         self._session.add(row)
         await self._session.flush()
         return _to_identity(row)
 
-    async def _identity_query(self, condition: ColumnElement[bool]) -> tuple[AuthIdentity, User] | None:
+    async def _identity_query(
+        self, condition: ColumnElement[bool]
+    ) -> tuple[AuthIdentity, User] | None:
         result = await self._session.execute(
             select(AuthIdentityRow, UserRow)
             .join(UserRow, UserRow.id == AuthIdentityRow.user_id)
@@ -123,20 +143,28 @@ class SqlAlchemyAuthRepository:
             & (AuthIdentityRow.provider_subject == email)
         )
 
-    async def get_identity_by_user_id(self, user_id: UUID) -> tuple[AuthIdentity, User] | None:
+    async def get_identity_by_user_id(
+        self, user_id: UUID
+    ) -> tuple[AuthIdentity, User] | None:
         return await self._identity_query(
             (AuthIdentityRow.provider == "password")
             & (AuthIdentityRow.user_id == user_id)
         )
 
     async def add_refresh_token(self, token: RefreshToken) -> None:
-        self._session.add(RefreshTokenRow(
-            id=token.id, user_id=token.user_id, family_id=token.family_id,
-            token_hash=token.token_hash, created_at=token.created_at,
-            expires_at=token.expires_at, consumed_at=token.consumed_at,
-            revoked_at=token.revoked_at,
-            replaced_by_token_id=token.replaced_by_token_id,
-        ))
+        self._session.add(
+            RefreshTokenRow(
+                id=token.id,
+                user_id=token.user_id,
+                family_id=token.family_id,
+                token_hash=token.token_hash,
+                created_at=token.created_at,
+                expires_at=token.expires_at,
+                consumed_at=token.consumed_at,
+                revoked_at=token.revoked_at,
+                replaced_by_token_id=token.replaced_by_token_id,
+            )
+        )
         await self._session.flush()
 
     async def get_refresh_token_for_update(self, token_hash: str) -> RefreshToken | None:
