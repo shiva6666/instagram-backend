@@ -11,9 +11,13 @@ from app.core.config import settings
 from app.core.ids import new_uuid7
 from app.modules.auth.models import AuthIdentity, RefreshToken
 from app.modules.auth.repository import AuthRepository
-from app.modules.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
+from app.modules.auth.tokens import (
+    create_access_token,
+    create_refresh_token,
+    hash_refresh_token,
+)
 from app.modules.users.models import User
-from app.modules.users.repository import UserAlreadyExistsError, UserRepository
+from app.modules.users.repository import UserRepository
 from app.modules.users.service import UserService
 
 
@@ -38,8 +42,13 @@ class AuthService:
         self._password_hasher = PasswordHasher()
 
     async def register(
-        self, *, username: str, email: str, password: str,
-        bio: str | None = None, is_private: bool = False,
+        self,
+        *,
+        username: str,
+        email: str,
+        password: str,
+        bio: str | None = None,
+        is_private: bool = False,
     ) -> tuple[User, str, str]:
         normalized_email = email.strip().lower()
         user = await self._user_service.create_user(
@@ -47,10 +56,13 @@ class AuthService:
         )
         now = datetime.now(UTC)
         identity = AuthIdentity(
-            id=new_uuid7(), user_id=user.id, provider="password",
+            id=new_uuid7(),
+            user_id=user.id,
+            provider="password",
             provider_subject=normalized_email,
             password_hash=await to_thread.run_sync(self._password_hasher.hash, password),
-            created_at=now, updated_at=now,
+            created_at=now,
+            updated_at=now,
         )
         await self._auth_repository.add_identity(identity)
         access_token, refresh_token = await self._issue_tokens(user)
@@ -117,7 +129,10 @@ class AuthService:
         user_id: UUID, family_id: UUID, raw_token: str, now: datetime
     ) -> RefreshToken:
         return RefreshToken(
-            id=new_uuid7(), user_id=user_id, family_id=family_id,
-            token_hash=hash_refresh_token(raw_token), created_at=now,
+            id=new_uuid7(),
+            user_id=user_id,
+            family_id=family_id,
+            token_hash=hash_refresh_token(raw_token),
+            created_at=now,
             expires_at=now + timedelta(days=settings.auth_refresh_token_ttl_days),
         )
