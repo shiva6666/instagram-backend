@@ -52,10 +52,14 @@ def _token_response(user: User, access_token: str, refresh_token: str) -> TokenR
 
 
 def _service(session: AsyncSession) -> AuthService:
-    return AuthService(SqlAlchemyAuthRepository(session), SqlAlchemyUserRepository(session))
+    return AuthService(
+        SqlAlchemyAuthRepository(session), SqlAlchemyUserRepository(session)
+    )
 
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     payload: RegisterRequest,
     session: Annotated[AsyncSession, Depends(get_db_session)],
@@ -97,15 +101,21 @@ async def refresh(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> TokenResponse:
     try:
-        user, access, refresh_token = await _service(session).refresh(payload.refresh_token)
+        user, access, refresh_token = await _service(session).refresh(
+            payload.refresh_token
+        )
     except RefreshTokenReuseError as error:
         # Persist family revocation before returning the security error.
         await session.commit()
-        raise HTTPException(status_code=401, detail="Refresh token reuse detected") from error
+        raise HTTPException(
+            status_code=401, detail="Refresh token reuse detected"
+        ) from error
     except InvalidRefreshTokenError as error:
         # Persist family revocation when the account became unavailable.
         await session.commit()
-        raise HTTPException(status_code=401, detail="Refresh token is invalid") from error
+        raise HTTPException(
+            status_code=401, detail="Refresh token is invalid"
+        ) from error
     return _token_response(user, access, refresh_token)
 
 
