@@ -55,8 +55,12 @@ class AuthIdentityRow(Base):
     provider: Mapped[str] = mapped_column(String(32), nullable=False)
     provider_subject: Mapped[str] = mapped_column(String(320), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(512), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
 
 class RefreshTokenRow(Base):
@@ -68,8 +72,12 @@ class RefreshTokenRow(Base):
     )
     family_id: Mapped[UUID] = mapped_column(nullable=False)
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     replaced_by_token_id: Mapped[UUID | None] = mapped_column(
@@ -137,7 +145,9 @@ class SqlAlchemyAuthRepository:
         identity_row, user_row = row
         return _to_identity(identity_row), _to_domain(user_row)
 
-    async def get_identity_by_email(self, email: str) -> tuple[AuthIdentity, User] | None:
+    async def get_identity_by_email(
+        self, email: str
+    ) -> tuple[AuthIdentity, User] | None:
         return await self._identity_query(
             (AuthIdentityRow.provider == "password")
             & (AuthIdentityRow.provider_subject == email)
@@ -167,7 +177,9 @@ class SqlAlchemyAuthRepository:
         )
         await self._session.flush()
 
-    async def get_refresh_token_for_update(self, token_hash: str) -> RefreshToken | None:
+    async def get_refresh_token_for_update(
+        self, token_hash: str
+    ) -> RefreshToken | None:
         row = await self._session.scalar(
             select(RefreshTokenRow)
             .where(RefreshTokenRow.token_hash == token_hash)
@@ -191,7 +203,9 @@ class SqlAlchemyAuthRepository:
             raise RuntimeError("refresh token was concurrently consumed")
         await self.add_refresh_token(new_token)
 
-    async def revoke_refresh_family(self, family_id: UUID, revoked_at: datetime) -> None:
+    async def revoke_refresh_family(
+        self, family_id: UUID, revoked_at: datetime
+    ) -> None:
         await self._session.execute(
             update(RefreshTokenRow)
             .where(
