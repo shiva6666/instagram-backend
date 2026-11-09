@@ -36,6 +36,7 @@ def _user_response(user: User) -> UserResponse:
         username=user.username,
         email=user.email,
         bio=user.bio,
+        avatar_key=user.avatar_key,
         is_private=user.is_private,
         status=user.status,
         created_at=user.created_at,

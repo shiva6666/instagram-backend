@@ -30,6 +30,7 @@ class UserResponse(BaseModel):
     username: str
     email: EmailStr
     bio: str | None
+    avatar_key: str | None
     is_private: bool
     status: str
     created_at: datetime
