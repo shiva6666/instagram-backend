@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
 
+    auth_jwt_secret: str | None = None
+    auth_jwt_issuer: str = "instagram-backend"
+    auth_jwt_audience: str = "instagram-api"
+    auth_access_token_ttl_seconds: int = 900
+    auth_refresh_token_ttl_days: int = 30
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
