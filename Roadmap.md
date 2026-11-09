@@ -87,7 +87,7 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 - [x] Design `refresh_tokens`: token hash, user/session family, created/expiry/consumed/revoked timestamps, and successor reference.
 - [x] Define transaction ownership for registration so user + identity creation is atomic.
 - [x] Decide client credential transport before finalizing API response/cookie behavior. Browser cookies require CSRF/origin protections; mobile clients need platform secure storage.
-- [ ] Write an ADR for access/refresh token choices, lifetimes, revocation, and client storage.
+- [x] Write an ADR for access/refresh token choices, lifetimes, revocation, and client storage.
 
 ### 1B. Implement
 
