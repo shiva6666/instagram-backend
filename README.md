@@ -152,6 +152,13 @@ In another terminal, start PostgreSQL and Redis with:
 docker compose up -d postgres redis
 ```
 
+After the API is running and migrations have been applied, exercise the public
+authentication journey with:
+
+```bash
+uv run python scripts/smoke_auth.py
+```
+
 ## Authentication (first implementation)
 
 The password-based auth slice exposes these routes under `/api/v1`:

@@ -26,7 +26,7 @@ A user can register, authenticate, create a profile, follow other users, publish
 | Core configuration and async SQLAlchemy setup | Present | Add transaction/session conventions before more modules |
 | Initial PostgreSQL migration | Present: users, posts, follows | Review constraints against actual domain behavior as features arrive |
 | Users domain model, service, repository adapter | Present; basic create/get behavior | Add API schemas/routes and integration tests |
-| Authentication | Not implemented | Design auth persistence, then implement the auth module |
+| Authentication | Password-based auth module is present: register, login, refresh rotation, logout, protected current-user route, and an initial PostgreSQL-backed journey test | Add edge-case integration, concurrency, and security-hardening coverage |
 | Posts application module/API | Not implemented as a module | Build after authentication and user profile APIs |
 | Follow graph API/service | Not implemented | Build after user/post vertical slice |
 | Feed | Not implemented | Start with a correct PostgreSQL chronological query |
@@ -57,15 +57,15 @@ This is a code-level snapshot, not a claim that every infrastructure container o
 
 ### Build
 
-- [ ] Confirm one documented command starts the required local dependencies and API.
-- [ ] Confirm configuration is environment-driven; no secrets are committed.
+- [x] Confirm one documented command starts the required local dependencies and API.
+- [x] Confirm configuration is environment-driven; no secrets are committed.
 - [ ] Confirm Alembic upgrade and downgrade work against a clean PostgreSQL database.
-- [ ] Define a consistent async SQLAlchemy session and transaction boundary convention.
-- [ ] Ensure application lifespan closes database and Redis resources reliably.
+- [x] Define a consistent async SQLAlchemy session and transaction boundary convention.
+- [x] Ensure application lifespan closes database and Redis resources reliably.
 - [ ] Ensure readiness checks dependencies with bounded timeouts; liveness does not depend on them.
-- [ ] Keep Ruff, mypy, and pytest checks in CI; add PostgreSQL-backed integration tests.
-- [ ] Add a small smoke script that exercises the public API journey as features arrive.
-- [ ] Document local setup, migrations, tests, and common troubleshooting.
+- [x] Keep Ruff, mypy, and pytest checks in CI; add PostgreSQL-backed integration tests.
+- [x] Add a small smoke script that exercises the public API journey as features arrive.
+- [x] Document local setup, migrations, tests, and common troubleshooting.
 
 ### Exit criteria
 
@@ -75,32 +75,31 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 
 # Milestone 1 — Authentication
 
-**Next milestone.** The repository already has a users domain/service/repository foundation, but no auth module or auth endpoints.
+**Status:** Password-based auth and an initial PostgreSQL-backed journey test are implemented. Rate limiting and the remaining proof items are still pending.
 
 **Design baseline:** email/password authentication; Argon2id password hashes; short-lived signed JWT access tokens; high-entropy opaque refresh tokens stored only as hashes; refresh-token rotation; server-side revocation. OAuth/OIDC is a later extension, not part of the first login implementation.
 
 ### 1A. Design before coding
 
-- [ ] Decide the initial login identifier (email) and email normalization rules.
-- [ ] Define whether one user can have multiple auth identities and how future OIDC identities map to a user.
-- [ ] Design `auth_identities`: user FK, provider, normalized provider subject/identifier, password hash for the password provider, timestamps, and uniqueness constraints.
-- [ ] Design `refresh_tokens`: token hash, user/session family, created/expiry/consumed/revoked timestamps, and successor reference.
-- [ ] Define transaction ownership for registration so user + identity creation is atomic.
-- [ ] Decide client credential transport before finalizing API response/cookie behavior. Browser cookies require CSRF/origin protections; mobile clients need platform secure storage.
+- [x] Decide the initial login identifier (email) and email normalization rules.
+- [x] Define whether one user can have multiple auth identities and how future OIDC identities map to a user.
+- [x] Design `auth_identities`: user FK, provider, normalized provider subject/identifier, password hash for the password provider, timestamps, and uniqueness constraints.
+- [x] Design `refresh_tokens`: token hash, user/session family, created/expiry/consumed/revoked timestamps, and successor reference.
+- [x] Define transaction ownership for registration so user + identity creation is atomic.
+- [x] Decide client credential transport before finalizing API response/cookie behavior. Browser cookies require CSRF/origin protections; mobile clients need platform secure storage.
 - [ ] Write an ADR for access/refresh token choices, lifetimes, revocation, and client storage.
 
 ### 1B. Implement
 
-- [ ] Add `app/modules/auth/` with router, schemas, service, repository, token/security helpers, and dependencies.
-- [ ] Add an Alembic migration for auth identities and refresh-token sessions.
-- [ ] Implement Argon2id hash and verify; never store or log plaintext passwords.
-- [ ] Implement registration and login with generic credential failures and rate limiting.
-- [ ] Issue short-lived JWT access tokens with explicit issuer, audience, subject, issued-at, expiry, token ID, and a fixed allowed algorithm.
-- [ ] Validate signature, algorithm, issuer, audience, expiry, and required claims.
-- [ ] Implement opaque refresh tokens using cryptographically secure randomness; persist only a SHA-256 hash or keyed fingerprint.
-- [ ] Rotate refresh tokens atomically. Exactly one concurrent refresh may consume a token.
-- [ ] Define and implement refresh-token reuse handling (including family revocation) and document the concurrent-client trade-off.
-- [ ] Implement logout/revocation and `get_current_user`; resolve the active user/account state after token validation.
+- [x] Add `app/modules/auth/` with router, schemas, service, repository, token/security helpers, and dependencies.
+- [x] Add an Alembic migration for auth identities and refresh-token sessions.
+- [x] Implement Argon2id hash and verify; never store or log plaintext passwords.
+- [x] Issue short-lived JWT access tokens with explicit issuer, audience, subject, issued-at, expiry, token ID, and a fixed allowed algorithm.
+- [x] Validate signature, algorithm, issuer, audience, expiry, and required claims.
+- [x] Implement opaque refresh tokens using cryptographically secure randomness; persist only a SHA-256 hash or keyed fingerprint.
+- [x] Rotate refresh tokens atomically. Exactly one concurrent refresh may consume a token.
+- [x] Define and implement refresh-token reuse handling (including family revocation) and document the concurrent-client trade-off.
+- [x] Implement logout/revocation and `get_current_user`; resolve the active user/account state after token validation.
 - [ ] Keep authentication (who is calling?) separate from authorization (may they do this?).
 
 ### 1C. Prove it
@@ -330,11 +329,11 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 
 ## Backend quality bar (every milestone)
 
-- [ ] Routes validate input/output and delegate business logic to application services.
-- [ ] Domain models, HTTP schemas, and ORM rows have distinct responsibilities.
+- [x] Routes validate input/output and delegate business logic to application services.
+- [x] Domain models, HTTP schemas, and ORM rows have distinct responsibilities.
 - [ ] Module boundaries are explicit; no cross-module ORM-row imports.
-- [ ] Database constraints protect invariants that must survive concurrent requests.
-- [ ] Mutating operations have documented transaction boundaries.
+- [x] Database constraints protect invariants that must survive concurrent requests.
+- [x] Mutating operations have documented transaction boundaries.
 - [ ] Pagination is bounded and uses a stable cursor where collections can grow.
 - [ ] Authorization is enforced on every resource operation; do not trust client-supplied owner IDs.
 - [ ] Background work is idempotent, observable, retryable, and bounded.
@@ -344,10 +343,10 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 
 ## Documentation and evidence checklist
 
-- [ ] README accurately describes implemented functionality and links to this roadmap.
-- [ ] Target architecture and implemented architecture are clearly distinguished.
+- [x] README accurately describes implemented functionality and links to this roadmap.
+- [x] Target architecture and implemented architecture are clearly distinguished.
 - [ ] ADRs record meaningful decisions and are kept current.
-- [ ] Learning notes explain concepts and why the project chose a particular approach.
+- [x] Learning notes explain concepts and why the project chose a particular approach.
 - [ ] Benchmarks include setup, dataset, command, and before/after results.
 - [ ] Failure drills include symptom, trigger, impact, recovery, and follow-up action.
 
