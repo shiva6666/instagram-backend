@@ -1,7 +1,6 @@
 """Route-level tests for the users router.
 
-Uses FastAPI's TestClient with dependency overrides to inject a fake session
-and a fake repository.  No PostgreSQL is required.
+Uses FastAPI's TestClient with dependency overrides.  No database required.
 
 Covers:
   - GET /api/v1/users/me → 200 own profile (authenticated)
@@ -9,34 +8,33 @@ Covers:
   - PATCH /api/v1/users/me → 200 successful update
   - PATCH /api/v1/users/me → 403 suspended account
   - PATCH /api/v1/users/me → 403 pending-deletion account
-  - GET /api/v1/users/{username} → 200 public profile
+  - GET /api/v1/users/{username} → 200 public profile, safe fields only
   - GET /api/v1/users/{username} → 404 unknown username
   - GET /api/v1/users/{username} → 404 suspended account (not leaked)
+  - GET /api/v1/users/{username} → 404 pending-deletion account (not leaked)
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
-from app.modules.auth.dependencies import get_current_user, get_db_session
-from app.modules.auth.tokens import create_access_token
+from app.modules.auth.dependencies import get_current_user
 from app.modules.users.models import User, UserStatus
-from app.modules.users.repository import SqlAlchemyUserRepository
+from app.modules.users.repository import UserAlreadyExistsError
+from app.modules.users.router import get_user_service
+from app.modules.users.service import UserService
 
 # ---------------------------------------------------------------------------
-# Fixtures & fakes
+# Shared user fixtures
 # ---------------------------------------------------------------------------
 
 _FIXED_NOW = datetime(2026, 11, 10, 0, 0, 0, tzinfo=UTC)
-_ALICE_ID = uuid4()
+_ALICE_ID: UUID = uuid4()
 
 _ALICE = User(
     id=_ALICE_ID,
@@ -45,18 +43,6 @@ _ALICE = User(
     bio="Hi there",
     avatar_key=None,
     is_private=False,
-    status=UserStatus.ACTIVE,
-    created_at=_FIXED_NOW,
-    updated_at=_FIXED_NOW,
-)
-
-_BOB = User(
-    id=uuid4(),
-    username="bob",
-    email="bob@example.com",
-    bio=None,
-    avatar_key=None,
-    is_private=True,
     status=UserStatus.ACTIVE,
     created_at=_FIXED_NOW,
     updated_at=_FIXED_NOW,
@@ -86,17 +72,13 @@ _PENDING_USER = User(
     updated_at=_FIXED_NOW,
 )
 
-_USER_STORE: dict[UUID, User] = {
-    _ALICE.id: _ALICE,
-    _BOB.id: _BOB,
-    _SUSPENDED_USER.id: _SUSPENDED_USER,
-    _PENDING_USER.id: _PENDING_USER,
-}
+
+# ---------------------------------------------------------------------------
+# In-memory fake repository and service factory
+# ---------------------------------------------------------------------------
 
 
-class FakeRepo:
-    """In-memory stand-in for SqlAlchemyUserRepository."""
-
+class FakeUserRepository:
     def __init__(self, store: dict[UUID, User]) -> None:
         self._store = store
 
@@ -104,12 +86,21 @@ class FakeRepo:
         return self._store.get(user_id)
 
     async def get_by_username(self, username: str) -> User | None:
-        return next((u for u in self._store.values() if u.username == username), None)
+        return next(
+            (u for u in self._store.values() if u.username == username), None
+        )
 
     async def get_by_email(self, email: str) -> User | None:
-        return next((u for u in self._store.values() if u.email == email), None)
+        return next(
+            (u for u in self._store.values() if u.email == email), None
+        )
 
     async def add(self, user: User) -> User:
+        if any(
+            u.username == user.username or u.email == user.email
+            for u in self._store.values()
+        ):
+            raise UserAlreadyExistsError
         self._store[user.id] = user
         return user
 
@@ -118,39 +109,35 @@ class FakeRepo:
         return user
 
 
-# ---------------------------------------------------------------------------
-# Dependency overrides
-# ---------------------------------------------------------------------------
-
-
-async def _fake_session() -> AsyncIterator[AsyncSession]:  # type: ignore[override]
-    """Yields a mock session; the actual session is never used in these tests."""
-    yield AsyncMock(spec=AsyncSession)
-
-
-def _override_repo(session: AsyncSession) -> FakeRepo:  # noqa: ARG001
-    return FakeRepo(dict(_USER_STORE))
+def _make_fake_service(store: dict[UUID, User]) -> UserService:
+    return UserService(FakeUserRepository(dict(store)))
 
 
 # ---------------------------------------------------------------------------
-# Client factory
+# Client helpers
 # ---------------------------------------------------------------------------
 
+_DEFAULT_STORE: dict[UUID, User] = {
+    _ALICE.id: _ALICE,
+    _SUSPENDED_USER.id: _SUSPENDED_USER,
+    _PENDING_USER.id: _PENDING_USER,
+}
 
-def _client(current_user: User | None = _ALICE) -> TestClient:
-    """Build a TestClient with repository and optionally current-user overridden."""
-    app.dependency_overrides[get_db_session] = _fake_session
-    app.dependency_overrides[SqlAlchemyUserRepository] = _override_repo
+
+def _client(
+    current_user: User | None = _ALICE,
+    store: dict[UUID, User] | None = None,
+) -> TestClient:
+    resolved_store = store if store is not None else _DEFAULT_STORE
 
     if current_user is not None:
         app.dependency_overrides[get_current_user] = lambda: current_user
 
+    app.dependency_overrides[get_user_service] = lambda: _make_fake_service(
+        resolved_store
+    )
+
     return TestClient(app, raise_server_exceptions=True)
-
-
-def _auth_header(user: User = _ALICE) -> dict[str, str]:
-    token = create_access_token(user.id)
-    return {"Authorization": f"Bearer {token}"}
 
 
 def _teardown() -> None:
@@ -169,16 +156,16 @@ def test_get_own_profile_returns_full_fields() -> None:
         assert resp.status_code == 200
         body = resp.json()
         assert body["username"] == "alice"
-        assert body["email"] == "alice@example.com"   # private field included
+        assert body["email"] == "alice@example.com"  # private field included
         assert body["status"] == UserStatus.ACTIVE
         assert "updated_at" in body
-        assert "deleted_at" not in body               # internal field excluded
+        assert "deleted_at" not in body  # internal field excluded
     finally:
         _teardown()
 
 
 def test_get_own_profile_requires_auth() -> None:
-    app.dependency_overrides.clear()   # remove current_user override
+    app.dependency_overrides.clear()  # remove all overrides — real auth required
     client = TestClient(app, raise_server_exceptions=False)
     try:
         resp = client.get("/api/v1/users/me")
@@ -199,7 +186,7 @@ def test_patch_own_profile_updates_bio_and_privacy() -> None:
             "/api/v1/users/me",
             json={"bio": "Updated bio", "is_private": True},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["bio"] == "Updated bio"
         assert body["is_private"] is True
@@ -228,7 +215,7 @@ def test_patch_own_profile_pending_deletion_returns_403() -> None:
 
 
 # ---------------------------------------------------------------------------
-# GET /users/{username}  — public profile
+# GET /users/{username} — public profile
 # ---------------------------------------------------------------------------
 
 
@@ -236,7 +223,7 @@ def test_get_public_profile_returns_safe_fields_only() -> None:
     client = _client()
     try:
         resp = client.get("/api/v1/users/alice")
-        assert resp.status_code == 200
+        assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["username"] == "alice"
         # Private fields must NOT appear

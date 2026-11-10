@@ -24,7 +24,14 @@ from app.modules.users.service import (
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def _service(session: AsyncSession) -> UserService:
+# ---------------------------------------------------------------------------
+# Injectable service factory — override in tests via dependency_overrides
+# ---------------------------------------------------------------------------
+
+
+def get_user_service(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> UserService:
     return UserService(SqlAlchemyUserRepository(session))
 
 
@@ -85,9 +92,8 @@ async def get_own_profile(
 async def update_own_profile(
     payload: UpdateProfileRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    service: Annotated[UserService, Depends(get_user_service)],
 ) -> OwnProfileResponse:
-    service = _service(session)
     kwargs: dict[str, object] = {}
     # Only pass fields that were explicitly set in the request body.
     if payload.bio is not None:
@@ -135,9 +141,8 @@ async def update_own_profile(
 )
 async def get_public_profile(
     username: str,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    service: Annotated[UserService, Depends(get_user_service)],
 ) -> PublicProfileResponse:
-    service = _service(session)
     try:
         user = await service.get_public_profile(username)
     except UserNotFoundError as error:
