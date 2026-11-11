@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Text,
     and_,
     or_,
     select,
@@ -49,7 +50,7 @@ class PostRow(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
-    caption: Mapped[str | None] = mapped_column(String(2200), nullable=True)
+    caption: Mapped[str | None] = mapped_column(Text(), nullable=True)
     is_private: Mapped[bool] = mapped_column(nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
@@ -82,9 +83,9 @@ class PostImageRow(Base):
 
 
 class UserFollowRow(Base):
-    """Minimal follow edge used by post visibility; follow APIs live in a later module."""
+    """Read adapter for the follows table created by the initial migration."""
 
-    __tablename__ = "user_follows"
+    __tablename__ = "follows"
 
     follower_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -92,6 +93,7 @@ class UserFollowRow(Base):
         primary_key=True,
     )
     followee_id: Mapped[UUID] = mapped_column(
+        "following_id",
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
