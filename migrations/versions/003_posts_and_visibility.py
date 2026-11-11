@@ -49,7 +49,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_posts_user_created",
         "posts",
-        ["user_id", sa.text("created_at DESC"), sa.text("id DESC")],
+        ["user_id", "created_at", "id"],
     )
     op.create_index(
         "ix_posts_active_user",
