@@ -52,9 +52,12 @@ class PostService:
 
     async def _assert_author_visible(self, viewer_id: UUID, author: User) -> None:
         await self._assert_not_blocked(viewer_id, author.id)
-        if author.is_private and viewer_id != author.id:
-            if not await self._posts.is_following(viewer_id, author.id):
-                raise PostNotFoundError("author was not found")
+        if (
+            author.is_private
+            and viewer_id != author.id
+            and not await self._posts.is_following(viewer_id, author.id)
+        ):
+            raise PostNotFoundError("author was not found")
 
     async def create_post(
         self,
