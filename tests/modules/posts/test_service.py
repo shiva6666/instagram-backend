@@ -89,11 +89,13 @@ class FakePostRepository:
     async def is_following(self, follower_id: UUID, followee_id: UUID) -> bool:
         return (follower_id, followee_id) in self.follows
 
-    async def is_blocked_between(self, first_user_id: UUID, second_user_id: UUID) -> bool:
-        return (
-            (first_user_id, second_user_id) in self.blocks
-            or (second_user_id, first_user_id) in self.blocks
-        )
+    async def is_blocked_between(
+        self, first_user_id: UUID, second_user_id: UUID
+    ) -> bool:
+        return (first_user_id, second_user_id) in self.blocks or (
+            second_user_id,
+            first_user_id,
+        ) in self.blocks
 
 
 class FakeUserRepository:
