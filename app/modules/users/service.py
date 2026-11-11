@@ -11,12 +11,12 @@ from app.modules.users.repository import UserAlreadyExistsError, UserRepository
 
 # Re-export so callers only need to import from the service layer.
 __all__ = [
-    "UserService",
-    "UserNotFoundError",
-    "UserSuspendedError",
-    "UserPendingDeletionError",
     "ForbiddenError",
     "UserAlreadyExistsError",
+    "UserNotFoundError",
+    "UserPendingDeletionError",
+    "UserService",
+    "UserSuspendedError",
 ]
 
 _SENTINEL = object()  # used to distinguish "not provided" from None
@@ -51,9 +51,7 @@ def _assert_account_operable(user: User) -> None:
     if user.status == UserStatus.SUSPENDED:
         raise UserSuspendedError(f"account {user.id} is suspended")
     if user.status == UserStatus.PENDING_DELETION:
-        raise UserPendingDeletionError(
-            f"account {user.id} is pending deletion"
-        )
+        raise UserPendingDeletionError(f"account {user.id} is pending deletion")
 
 
 class UserService:

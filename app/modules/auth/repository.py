@@ -190,6 +190,9 @@ class SqlAlchemyAuthRepository:
     async def rotate_refresh_token(
         self, old_token_id: UUID, consumed_at: datetime, new_token: RefreshToken
     ) -> None:
+        # Insert and flush the successor first so the immediate self-referencing
+        # foreign key is satisfied when the predecessor points to it.
+        await self.add_refresh_token(new_token)
         result = await self._session.execute(
             update(RefreshTokenRow)
             .where(
@@ -201,7 +204,6 @@ class SqlAlchemyAuthRepository:
         )
         if result.rowcount != 1:
             raise RuntimeError("refresh token was concurrently consumed")
-        await self.add_refresh_token(new_token)
 
     async def revoke_refresh_family(
         self, family_id: UUID, revoked_at: datetime
