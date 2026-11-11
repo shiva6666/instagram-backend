@@ -121,9 +121,7 @@ class PostService:
             raise PostNotFoundError("author was not found")
 
         await self._assert_author_visible(viewer.id, author)
-        posts = await self._posts.list_by_author(
-            author.id, offset=offset, limit=limit
-        )
+        posts = await self._posts.list_by_author(author.id, offset=offset, limit=limit)
         has_more = len(posts) > limit
         page = posts[:limit]
         if viewer.id != author.id:
