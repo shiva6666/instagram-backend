@@ -85,9 +85,7 @@ class FakeUserRepository:
         return self._store.get(user_id)
 
     async def get_by_username(self, username: str) -> User | None:
-        return next(
-            (u for u in self._store.values() if u.username == username), None
-        )
+        return next((u for u in self._store.values() if u.username == username), None)
 
     async def get_by_email(self, email: str) -> User | None:
         return next(
