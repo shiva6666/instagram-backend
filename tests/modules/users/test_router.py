@@ -88,9 +88,7 @@ class FakeUserRepository:
         return next((u for u in self._store.values() if u.username == username), None)
 
     async def get_by_email(self, email: str) -> User | None:
-        return next(
-            (u for u in self._store.values() if u.email == email), None
-        )
+        return next((u for u in self._store.values() if u.email == email), None)
 
     async def add(self, user: User) -> User:
         if any(
