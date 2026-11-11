@@ -10,7 +10,7 @@ from app.main import app
 def test_authentication_journey_uses_postgresql() -> None:
     """Exercise the public auth flow against the PostgreSQL schema in CI."""
     suffix = secrets.token_hex(6)
-    email = f"smoke-{suffix}@example.test"
+    email = f"smoke-{suffix}@example.com"
     password = "a-strong-test-password"
 
     with TestClient(app) as client:
