@@ -93,9 +93,7 @@ class PostService:
         )
         return await self._posts.add(post), author
 
-    async def get_post(
-        self, *, post_id: UUID, viewer: User
-    ) -> tuple[Post, User]:
+    async def get_post(self, *, post_id: UUID, viewer: User) -> tuple[Post, User]:
         post = await self._posts.get_by_id(post_id)
         if post is None:
             raise PostNotFoundError("post was not found")
