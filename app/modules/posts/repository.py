@@ -46,7 +46,6 @@ class PostRow(Base):
         PGUUID(as_uuid=True),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
     )
     caption: Mapped[str | None] = mapped_column(String(2200), nullable=True)
     is_private: Mapped[bool] = mapped_column(nullable=False, default=False)
