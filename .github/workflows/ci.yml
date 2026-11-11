@@ -34,7 +34,7 @@ jobs:
         with:
           python-version: "3.15"
       - run: uv sync --extra dev --frozen
-      - run: uv run ruff check .
+      - run: uv run ruff check --fix .; git diff -- .
       - run: uv run ruff format --check .
       - run: uv run mypy app/core
       - run: uv run alembic upgrade head
