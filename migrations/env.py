@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.core.db import Base
+from app.modules.users import repository as _users_repository  # noqa: F401
+from app.modules.posts import repository as _posts_repository  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
