@@ -95,7 +95,9 @@ def upgrade() -> None:
             name="user_follows_no_self_follow",
         ),
     )
-    op.create_index("ix_user_follows_followee", "user_follows", ["followee_id", "status"])
+    op.create_index(
+        "ix_user_follows_followee", "user_follows", ["followee_id", "status"]
+    )
 
     op.create_table(
         "user_blocks",
