@@ -51,9 +51,7 @@ def _assert_account_operable(user: User) -> None:
     if user.status == UserStatus.SUSPENDED:
         raise UserSuspendedError(f"account {user.id} is suspended")
     if user.status == UserStatus.PENDING_DELETION:
-        raise UserPendingDeletionError(
-            f"account {user.id} is pending deletion"
-        )
+        raise UserPendingDeletionError(f"account {user.id} is pending deletion")
 
 
 class UserService:
