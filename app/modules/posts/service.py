@@ -64,7 +64,9 @@ class PostService:
         image_urls: list[str],
         is_private: bool = False,
     ) -> tuple[Post, User]:
-        author = await self._active_author(actor.id)
+        author = await self._users.get_by_id(actor.id)
+        if author is None or author.deleted_at is not None:
+            raise UserUnavailableError("account is not available")
         _ensure_active(author)
 
         normalized_urls = [url.strip() for url in image_urls]
@@ -128,7 +130,9 @@ class PostService:
         return page, author, offset + limit if has_more else None
 
     async def delete_post(self, *, post_id: UUID, actor: User) -> None:
-        author_actor = await self._active_author(actor.id)
+        author_actor = await self._users.get_by_id(actor.id)
+        if author_actor is None or author_actor.deleted_at is not None:
+            raise UserUnavailableError("account is not available")
         _ensure_active(author_actor)
         post = await self._posts.get_by_id(post_id)
         if post is None:
