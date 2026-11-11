@@ -35,7 +35,9 @@ class PostRepository(Protocol):
 
     async def is_following(self, follower_id: UUID, followee_id: UUID) -> bool: ...
 
-    async def is_blocked_between(self, first_user_id: UUID, second_user_id: UUID) -> bool: ...
+    async def is_blocked_between(
+        self, first_user_id: UUID, second_user_id: UUID
+    ) -> bool: ...
 
 
 class PostRow(Base):
