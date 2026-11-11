@@ -122,8 +122,7 @@ def _to_domain(row: PostRow) -> Post:
         user_id=row.user_id,
         caption=row.caption,
         images=tuple(
-            PostImage(position=image.position, url=image.url)
-            for image in row.images
+            PostImage(position=image.position, url=image.url) for image in row.images
         ),
         is_private=row.is_private,
         created_at=row.created_at,
