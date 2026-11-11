@@ -156,7 +156,7 @@ def test_create_post_rejects_inactive_author() -> None:
 def test_get_post_hides_private_post_from_non_owner() -> None:
     alice = make_user()
     bob = make_user(username="bob")
-    service, repository = service_for([alice, bob])
+    service, _repository = service_for([alice, bob])
     post, _ = run(
         service.create_post(
             actor=alice,
