@@ -116,3 +116,39 @@ def test_public_follow_is_idempotent_and_self_follow_is_rejected() -> None:
         assert second.status_code == 200, second.text
         assert second.json()["created_at"] == first.json()["created_at"]
         assert self_follow.status_code == 400
+
+def test_follower_list_uses_cursor_without_duplicates() -> None:
+    with TestClient(app) as client:
+        target, target_token = _register(client)
+        followers = [_register(client) for _ in range(3)]
+
+        for username, token in followers:
+            followed = client.post(
+                f"/api/v1/follows/{target}",
+                headers=_auth(token),
+            )
+            assert followed.status_code == 200, followed.text
+
+        first = client.get(
+            f"/api/v1/follows/{target}/followers?limit=2",
+            headers=_auth(target_token),
+        )
+        assert first.status_code == 200, first.text
+        first_payload = first.json()
+        assert first_payload["limit"] == 2
+        assert len(first_payload["users"]) == 2
+        assert first_payload["next_cursor"] is not None
+
+        second = client.get(
+            f"/api/v1/follows/{target}/followers?limit=2&cursor={first_payload['next_cursor']}",
+            headers=_auth(target_token),
+        )
+        assert second.status_code == 200, second.text
+        second_payload = second.json()
+        assert len(second_payload["users"]) == 1
+        assert second_payload["next_cursor"] is None
+
+        first_ids = {item["id"] for item in first_payload["users"]}
+        second_ids = {item["id"] for item in second_payload["users"]}
+        assert first_ids.isdisjoint(second_ids)
+        assert len(first_ids | second_ids) == 3
