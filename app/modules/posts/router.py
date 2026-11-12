@@ -16,6 +16,7 @@ from app.modules.posts.schemas import (
     PostResponse,
 )
 from app.modules.posts.service import (
+    InvalidPostCursorError,
     PostForbiddenError,
     PostNotFoundError,
     PostService,
@@ -105,22 +106,23 @@ async def list_posts_by_author(
     viewer: Annotated[User, Depends(get_current_user)],
     service: Annotated[PostService, Depends(get_post_service)],
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    cursor: str | None = None,
 ) -> PostListResponse:
     try:
-        posts, author, next_offset = await service.list_posts_by_author(
+        posts, _author, next_cursor = await service.list_posts_by_author(
             username=username,
             viewer=viewer,
-            offset=offset,
+            cursor=cursor,
             limit=limit,
         )
     except PostNotFoundError as error:
         raise HTTPException(status_code=404, detail="Author was not found") from error
+    except InvalidPostCursorError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     return PostListResponse(
-        posts=[_response(post, author) for post in posts],
+        posts=[_response(post, _author) for post in posts],
         limit=limit,
-        offset=offset,
-        next_offset=next_offset,
+        next_cursor=next_cursor,
     )
 
 
