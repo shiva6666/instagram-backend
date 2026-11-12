@@ -101,12 +101,8 @@ def test_public_follow_is_idempotent_and_self_follow_is_rejected() -> None:
         target, _ = _register(client)
         follower, follower_token = _register(client)
 
-        first = client.post(
-            f"/api/v1/follows/{target}", headers=_auth(follower_token)
-        )
-        second = client.post(
-            f"/api/v1/follows/{target}", headers=_auth(follower_token)
-        )
+        first = client.post(f"/api/v1/follows/{target}", headers=_auth(follower_token))
+        second = client.post(f"/api/v1/follows/{target}", headers=_auth(follower_token))
         self_follow = client.post(
             f"/api/v1/follows/{follower}", headers=_auth(follower_token)
         )
