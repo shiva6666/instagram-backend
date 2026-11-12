@@ -7,9 +7,9 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.modules.follows.models import (
+    FollowedUser,
     FollowRelationship,
     FollowStatus,
-    FollowedUser,
 )
 from app.modules.follows.repository import FollowRepository
 from app.modules.users.models import User, UserStatus
