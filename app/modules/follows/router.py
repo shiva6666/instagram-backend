@@ -120,7 +120,9 @@ async def accept_follow_request(
             actor=actor, follower_username=username
         )
     except (FollowTargetNotFoundError, FollowRequestNotFoundError) as error:
-        raise HTTPException(status_code=404, detail="Follow request was not found") from error
+        raise HTTPException(
+            status_code=404, detail="Follow request was not found"
+        ) from error
     return _relationship_response(relationship)
 
 
@@ -137,7 +139,9 @@ async def reject_follow_request(
     try:
         await service.reject_request(actor=actor, follower_username=username)
     except (FollowTargetNotFoundError, FollowRequestNotFoundError) as error:
-        raise HTTPException(status_code=404, detail="Follow request was not found") from error
+        raise HTTPException(
+            status_code=404, detail="Follow request was not found"
+        ) from error
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
