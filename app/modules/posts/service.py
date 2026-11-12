@@ -65,9 +65,7 @@ class PostService:
             return False
         if viewer_id == post.user_id:
             return True
-        if post.visibility == PostVisibility.PRIVATE:
-            return False
-        return True
+        return post.visibility != PostVisibility.PRIVATE
 
     async def create_post(
         self,
