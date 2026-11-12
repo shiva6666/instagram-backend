@@ -48,7 +48,7 @@ def _relationship_response(
     )
 
 
-def _list_response(page) -> FollowListResponse:
+def _list_response(page, *, limit: int) -> FollowListResponse:
     return FollowListResponse(
         users=[
             FollowUserResponse(
@@ -62,7 +62,7 @@ def _list_response(page) -> FollowListResponse:
             )
             for item in page.users
         ],
-        limit=len(page.users),
+        limit=limit,
         next_cursor=page.next_cursor,
     )
 
@@ -179,9 +179,7 @@ async def list_followers(
         raise HTTPException(status_code=404, detail="User was not found") from error
     except InvalidFollowCursorError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    response = _list_response(page)
-    response.limit = limit
-    return response
+    return _list_response(page, limit=limit)
 
 
 @router.get("/{username}/following", response_model=FollowListResponse)
