@@ -113,6 +113,7 @@ def test_public_follow_is_idempotent_and_self_follow_is_rejected() -> None:
         assert second.json()["created_at"] == first.json()["created_at"]
         assert self_follow.status_code == 400
 
+
 def test_follower_list_uses_cursor_without_duplicates() -> None:
     with TestClient(app) as client:
         target, target_token = _register(client)
