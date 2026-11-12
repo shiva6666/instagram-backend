@@ -73,9 +73,7 @@ def _decode_cursor(
 
 
 class FollowService:
-    def __init__(
-        self, follows: FollowRepository, users: UserRepository
-    ) -> None:
+    def __init__(self, follows: FollowRepository, users: UserRepository) -> None:
         self._follows = follows
         self._users = users
 
@@ -99,9 +97,7 @@ class FollowService:
         if existing is not None:
             return existing
 
-        status = (
-            FollowStatus.PENDING if target.is_private else FollowStatus.ACCEPTED
-        )
+        status = FollowStatus.PENDING if target.is_private else FollowStatus.ACCEPTED
         return await self._follows.add_relationship(
             actor.id, target.id, status, datetime.now(UTC)
         )
@@ -121,9 +117,7 @@ class FollowService:
             raise FollowRequestNotFoundError("pending follow request was not found")
         return relationship
 
-    async def reject_request(
-        self, *, actor: User, follower_username: str
-    ) -> None:
+    async def reject_request(self, *, actor: User, follower_username: str) -> None:
         follower = await self._active_user(follower_username)
         removed = await self._follows.remove_relationship(
             follower.id, actor.id, pending_only=True
@@ -167,9 +161,7 @@ class FollowService:
         has_more = len(items) > limit
         page = tuple(items[:limit])
         next_cursor = (
-            _encode_cursor(page[-1], followers=followers)
-            if has_more and page
-            else None
+            _encode_cursor(page[-1], followers=followers) if has_more and page else None
         )
         return FollowPage(users=page, next_cursor=next_cursor)
 
