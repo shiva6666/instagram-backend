@@ -65,18 +65,28 @@ class FakePostRepository:
         return post if post is not None and post.deleted_at is None else None
 
     async def list_by_author(
-        self, author_id: UUID, *, offset: int, limit: int
+        self,
+        author_id: UUID,
+        *,
+        viewer_id: UUID,
+        before_created_at: datetime | None,
+        before_id: UUID | None,
+        limit: int,
     ) -> list[Post]:
-        items = sorted(
-            (
-                post
-                for post in self.posts.values()
-                if post.user_id == author_id and post.deleted_at is None
-            ),
-            key=lambda post: (post.created_at, post.id),
-            reverse=True,
-        )
-        return items[offset : offset + limit + 1]
+        items = [
+            post
+            for post in self.posts.values()
+            if post.user_id == author_id
+            and post.deleted_at is None
+            and (viewer_id == author_id or not post.is_private)
+            and (
+                before_created_at is None
+                or before_id is None
+                or (post.created_at, post.id) < (before_created_at, before_id)
+            )
+        ]
+        items.sort(key=lambda post: (post.created_at, post.id), reverse=True)
+        return items[: limit + 1]
 
     async def soft_delete(self, post_id: UUID, *, deleted_at: datetime) -> None:
         post = self.posts[post_id]
@@ -274,7 +284,7 @@ def test_delete_post_is_owner_only_and_soft_deletes() -> None:
         run(service.get_post(post_id=post.id, viewer=alice))
 
 
-def test_list_posts_by_author_returns_next_offset_when_more_exist() -> None:
+def test_list_posts_by_author_uses_stable_cursor_without_duplicates() -> None:
     alice = make_user()
     service, _ = service_for([alice])
     for index in range(3):
@@ -286,15 +296,53 @@ def test_list_posts_by_author_returns_next_offset_when_more_exist() -> None:
             )
         )
 
-    posts, author, next_offset = run(
+    first_page, author, next_cursor = run(
         service.list_posts_by_author(
             username="alice",
             viewer=alice,
-            offset=0,
+            cursor=None,
+            limit=2,
+        )
+    )
+    second_page, _, final_cursor = run(
+        service.list_posts_by_author(
+            username="alice",
+            viewer=alice,
+            cursor=next_cursor,
+            limit=2,
+        )
+    )
+
+    assert len(first_page) == 2
+    assert author.id == alice.id
+    assert next_cursor is not None
+    assert len(second_page) == 1
+    assert final_cursor is None
+    assert first_page[0].id != second_page[0].id
+
+
+def test_private_posts_are_filtered_before_page_limit() -> None:
+    alice = make_user()
+    bob = make_user(username="bob")
+    service, _ = service_for([alice, bob])
+    for index, is_private in enumerate([True, False, True, False]):
+        run(
+            service.create_post(
+                actor=alice,
+                caption=str(index),
+                image_urls=[f"https://cdn.example/{index}.jpg"],
+                is_private=is_private,
+            )
+        )
+
+    posts, _, _ = run(
+        service.list_posts_by_author(
+            username="alice",
+            viewer=bob,
+            cursor=None,
             limit=2,
         )
     )
 
     assert len(posts) == 2
-    assert author.id == alice.id
-    assert next_offset == 2
+    assert all(not post.is_private for post in posts)
