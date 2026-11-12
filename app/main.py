@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from app.api.router import api_router
 from app.core.cache import close_redis
-from app.core.config import settings
+from app.core.config import settings, validate_security_settings
 from app.core.db import close_database
 from app.core.logging import configure_logging
 
@@ -14,6 +14,7 @@ configure_logging()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    validate_security_settings()
     yield
     await close_database()
     await close_redis()
