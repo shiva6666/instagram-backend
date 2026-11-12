@@ -20,6 +20,8 @@ A user can register, authenticate, create a profile, follow other users, publish
 
 ## Current repository status (verified against the repository as of 2026-11-12)
 
+Validation run: `uv run pytest tests/modules/users tests/modules/auth/test_tokens.py tests/modules/auth/test_api_integration.py -q` → 33 passed.
+
 | Area | Current state | Next action |
 |---|---|---|
 | FastAPI application and health route | Present; health/readiness smoke path exists | Keep dependency checks and smoke flows green |
@@ -149,7 +151,7 @@ A user can register and log in, access a protected endpoint, rotate a refresh to
 - [x] Create a posts module with domain model, repository port/adapter, service, schemas, and router.
 - [x] Implement create, get, list-by-author, and soft-delete operations.
 - [x] Enforce owner-only post mutation using the authenticated principal.
-- [ ] Define post visibility and lifecycle states before media integration.
+- [x] Define post visibility and lifecycle states before media integration.
 - [ ] Use cursor pagination for author post lists.
 - [ ] Add database constraints and indexes justified by the actual query patterns.
 - [ ] Add integration tests using PostgreSQL.

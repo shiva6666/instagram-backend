@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core.ids import new_uuid7
-from app.modules.posts.models import Post, PostImage
+from app.modules.posts.models import Post, PostImage, PostLifecycle, PostVisibility
 from app.modules.posts.repository import PostRepository
 from app.modules.users.models import User, UserStatus
 from app.modules.users.repository import UserRepository
@@ -59,6 +59,16 @@ class PostService:
         ):
             raise PostNotFoundError("author was not found")
 
+    @staticmethod
+    def _is_visible_to(post: Post, *, viewer_id: UUID) -> bool:
+        if post.lifecycle != PostLifecycle.PUBLISHED:
+            return False
+        if viewer_id == post.user_id:
+            return True
+        if post.visibility == PostVisibility.PRIVATE:
+            return False
+        return True
+
     async def create_post(
         self,
         *,
@@ -100,7 +110,7 @@ class PostService:
 
         author = await self._active_author(post.user_id)
         await self._assert_author_visible(viewer.id, author)
-        if post.is_private and viewer.id != author.id:
+        if not self._is_visible_to(post, viewer_id=viewer.id):
             raise PostNotFoundError("post was not found")
         return post, author
 
@@ -125,7 +135,11 @@ class PostService:
         has_more = len(posts) > limit
         page = posts[:limit]
         if viewer.id != author.id:
-            page = [post for post in page if not post.is_private]
+            page = [
+                post
+                for post in page
+                if self._is_visible_to(post, viewer_id=viewer.id)
+            ]
         return page, author, offset + limit if has_more else None
 
     async def delete_post(self, *, post_id: UUID, actor: User) -> None:

@@ -8,7 +8,12 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.modules.posts.models import Post, PostImage
+from app.modules.posts.models import (
+    Post,
+    PostImage,
+    PostLifecycle,
+    PostVisibility,
+)
 from app.modules.posts.service import (
     PostForbiddenError,
     PostNotFoundError,
@@ -139,6 +144,45 @@ def test_create_post_uses_authenticated_author_and_orders_images() -> None:
         PostImage(position=0, url="https://cdn.example/one.jpg"),
         PostImage(position=1, url="https://cdn.example/two.jpg"),
     )
+    assert post.visibility == PostVisibility.PUBLIC
+    assert post.lifecycle == PostLifecycle.PUBLISHED
+
+
+def test_post_visibility_and_lifecycle_are_explicit() -> None:
+    now = datetime(2026, 1, 2, tzinfo=UTC)
+    public_post = Post(
+        id=uuid4(),
+        user_id=uuid4(),
+        caption="hello",
+        images=(PostImage(position=0, url="https://cdn.example/x.jpg"),),
+        is_private=False,
+        created_at=now,
+        updated_at=now,
+    )
+    private_post = Post(
+        id=uuid4(),
+        user_id=uuid4(),
+        caption="private",
+        images=(PostImage(position=0, url="https://cdn.example/y.jpg"),),
+        is_private=True,
+        created_at=now,
+        updated_at=now,
+    )
+    deleted_post = Post(
+        id=uuid4(),
+        user_id=uuid4(),
+        caption="deleted",
+        images=(PostImage(position=0, url="https://cdn.example/z.jpg"),),
+        is_private=False,
+        created_at=now,
+        updated_at=now,
+        deleted_at=now,
+    )
+
+    assert public_post.visibility == PostVisibility.PUBLIC
+    assert private_post.visibility == PostVisibility.PRIVATE
+    assert public_post.lifecycle == PostLifecycle.PUBLISHED
+    assert deleted_post.lifecycle == PostLifecycle.SOFT_DELETED
 
 
 def test_create_post_rejects_inactive_author() -> None:
