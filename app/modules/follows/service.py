@@ -93,6 +93,8 @@ class FollowService:
         target = await self._active_user(username)
         if actor.id == target.id:
             raise FollowSelfError("you cannot follow yourself")
+        if await self._follows.is_blocked_between(actor.id, target.id):
+            raise FollowTargetNotFoundError("user was not found")
         existing = await self._follows.get_relationship(actor.id, target.id)
         if existing is not None:
             return existing
