@@ -29,7 +29,7 @@ def _auth(token: str) -> dict[str, str]:
 def test_author_post_visibility_is_filtered_before_cursor_pagination() -> None:
     with TestClient(app) as client:
         author, author_token = _register(client)
-        viewer, viewer_token = _register(client)
+        _viewer, viewer_token = _register(client)
 
         for caption, is_private in (
             ("public-old", False),
