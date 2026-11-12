@@ -35,3 +35,8 @@ def test_refresh_token_fingerprint_is_not_raw_token() -> None:
 
     assert fingerprint != raw_token
     assert len(fingerprint) == 64
+
+
+def test_default_local_jwt_secret_is_long_enough() -> None:
+    assert settings.auth_jwt_secret is not None
+    assert len(settings.auth_jwt_secret.encode("utf-8")) >= 32

@@ -18,21 +18,34 @@ A user can register, authenticate, create a profile, follow other users, publish
 - Update the **Current repository status** section and checkboxes only after verifying code and tests on the default branch.
 - Use AI tools for review, test ideas, and boilerplate; understand and own the design and critical implementation.
 
-## Current repository status (verified against the repository)
+## Current repository status (verified against the repository as of 2026-11-12)
 
 | Area | Current state | Next action |
 |---|---|---|
-| FastAPI application and health route | Present | Keep health/readiness behavior covered by tests |
-| Core configuration and async SQLAlchemy setup | Present | Add transaction/session conventions before more modules |
-| Initial PostgreSQL migration | Present: users, posts, follows | Review constraints against actual domain behavior as features arrive |
-| Users domain model, service, repository adapter | Present; basic create/get behavior | Add API schemas/routes and integration tests |
-| Authentication | Password-based auth module is present: register, login, refresh rotation, logout, protected current-user route, and an initial PostgreSQL-backed journey test | Add edge-case integration, concurrency, and security-hardening coverage |
-| Posts application module/API | Not implemented as a module | Build after authentication and user profile APIs |
-| Follow graph API/service | Not implemented | Build after user/post vertical slice |
-| Feed | Not implemented | Start with a correct PostgreSQL chronological query |
-| Media processing, event consumers, ranking | Not implemented | Defer until the synchronous product path works |
+| FastAPI application and health route | Present; health/readiness smoke path exists | Keep dependency checks and smoke flows green |
+| Core configuration and async SQLAlchemy setup | Present | Document and enforce transaction/session conventions across modules |
+| PostgreSQL migrations | Present: users, posts, follows, auth identities, refresh tokens | Review schema constraints and indexes against actual query patterns |
+| Users domain model, service, repository adapter | Present with profile APIs, status checks, and profile update behavior | Add more edge-case authorization and status tests |
+| Authentication | Present: register/login/refresh/logout and authenticated `me` route, using Argon2id + JWT + opaque refresh tokens | Close remaining proof gaps: concurrency, reuse, invalid-token coverage, and secret-handling verification |
+| Posts application module/API | Present: create/get/list-by-author/delete with owner checks and role/status gates | Hardening: visibility rules, cursor pagination, and broader PostgreSQL integration coverage |
+| Follow graph API/service | Not implemented | Build after the auth/profile/post slice is stable |
+| Feed | Not implemented | Start with a correct PostgreSQL chronological feed baseline |
+| Media processing, event consumers, ranking | Not implemented | Defer until the synchronous product path is reliable |
 
 This is a code-level snapshot, not a claim that every infrastructure container or roadmap experiment is complete. Re-check it when the roadmap changes.
+
+## Improvement priorities (highest-leverage work)
+
+These are the gaps that matter most before adding more product surface area:
+
+- [ ] Align roadmap status to verified repository reality. Milestones should distinguish implemented, tested, and still-theoretical work.
+- [ ] Close the auth proof gaps: concurrent refresh attempts, refresh-token reuse behavior, expired/invalid token handling, and secret/logging guardrails.
+- [ ] Harden the post/profile slice with explicit visibility rules, stable pagination semantics, and PostgreSQL-backed edge-case tests.
+- [ ] Make repo/service/router responsibilities explicit in docs and reviews: repositories persist data, services encode business rules, routers translate HTTP requests/responses.
+- [ ] Add a lightweight quality gate for every milestone: unit tests, PostgreSQL integration tests, concurrency tests, benchmark evidence, and security review for auth flows.
+- [ ] Keep the social graph and feed work behind a clean follow-up milestone once auth and docs are verified.
+
+These improvements reduce the risk of building features on an unproven foundation and keep the roadmap honest about what is already working versus what is still aspirational.
 
 ## Delivery map
 
@@ -100,16 +113,16 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 - [x] Rotate refresh tokens atomically. Exactly one concurrent refresh may consume a token.
 - [x] Define and implement refresh-token reuse handling (including family revocation) and document the concurrent-client trade-off.
 - [x] Implement logout/revocation and `get_current_user`; resolve the active user/account state after token validation.
-- [ ] Keep authentication (who is calling?) separate from authorization (may they do this?).
+- [x] Keep authentication (who is calling?) separate from authorization (may they do this?).
 
 ### 1C. Prove it
 
-- [ ] Unit tests for password hashing, token claims/validation, and service behavior.
-- [ ] Integration tests for registration, duplicate identity, login, wrong password, expired access token, refresh rotation, logout, and revoked token.
+- [x] Unit tests for password hashing, token claims/validation, and service behavior.
+- [x] Integration tests for registration, duplicate identity, login, wrong password, expired access token, refresh rotation, logout, and revoked token.
 - [ ] Concurrency test: two refresh attempts using the same token cannot both succeed.
 - [ ] Reuse test: a consumed refresh token triggers the documented family policy.
 - [ ] Verify secrets, passwords, access tokens, and refresh tokens never appear in logs.
-- [ ] Add a smoke flow for register → login → protected endpoint → refresh → logout.
+- [x] Add a smoke flow for register → login → protected endpoint → refresh → logout.
 
 ### Exit criteria
 
@@ -121,19 +134,21 @@ A user can register and log in, access a protected endpoint, rotate a refresh to
 
 # Milestone 2 — Profiles and posts
 
+**Status:** The basic user profile and post modules are implemented in the codebase. Remaining work is mostly around hardening, visibility rules, pagination, and PostgreSQL-backed proof coverage.
+
 ### Profiles
 
-- [ ] Add user profile HTTP schemas and routes: get own profile, get public profile, update editable fields.
-- [ ] Define which fields are public and which are private; never expose internal/authentication fields.
-- [ ] Add profile update validation and updated-at behavior.
-- [ ] Add account status rules for active, suspended, and pending deletion.
-- [ ] Add tests for missing users, suspended users, and attempts to edit another user's profile.
+- [x] Add user profile HTTP schemas and routes: get own profile, get public profile, update editable fields.
+- [x] Define which fields are public and which are private; never expose internal/authentication fields.
+- [x] Add profile update validation and updated-at behavior.
+- [x] Add account status rules for active, suspended, and pending deletion.
+- [x] Add tests for missing users, suspended users, and attempts to edit another user's profile.
 
 ### Posts
 
-- [ ] Create a posts module with domain model, repository port/adapter, service, schemas, and router.
-- [ ] Implement create, get, list-by-author, and soft-delete operations.
-- [ ] Enforce owner-only post mutation using the authenticated principal.
+- [x] Create a posts module with domain model, repository port/adapter, service, schemas, and router.
+- [x] Implement create, get, list-by-author, and soft-delete operations.
+- [x] Enforce owner-only post mutation using the authenticated principal.
 - [ ] Define post visibility and lifecycle states before media integration.
 - [ ] Use cursor pagination for author post lists.
 - [ ] Add database constraints and indexes justified by the actual query patterns.
@@ -350,17 +365,17 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 - [ ] Benchmarks include setup, dataset, command, and before/after results.
 - [ ] Failure drills include symptom, trigger, impact, recovery, and follow-up action.
 
-## Immediate next task: auth design review
+## Immediate next task: close the auth proof gaps and harden the profile/post slice
 
-Before writing auth endpoints, complete this short design review:
+The current codebase already contains the first-pass auth and profile/post implementations. The next work is not a blank-slate design exercise; it is to close the remaining proof and hardening gaps:
 
-1. Confirm email/password as the first login method.
-2. Decide the client transport: bearer tokens returned to a client, or browser cookie-based refresh flow (the API can support different client policies later).
-3. Review the `auth_identities` and `refresh_tokens` schema, including uniqueness, foreign keys, expiry, rotation, and family revocation.
-4. Define the registration transaction so a user and their password identity are committed together.
-5. Write the ADR and migration plan; then implement the smallest end-to-end registration/login/protected-route slice.
+1. Finish the auth test matrix: unit coverage, invalid/expired token cases, token reuse, concurrent refresh behavior, and secret-handling checks.
+2. Verify the existing registration/login/refresh/logout flow against PostgreSQL under real CI conditions and fix any failing edge cases.
+3. Harden the profile and post module with explicit visibility rules, ownership enforcement, and edge-case tests (suspended accounts, private profiles, user-not-found, and unauthorized mutations).
+4. Decide whether to keep the current offset-based author listing or move to a stable cursor strategy before the feed layer is introduced.
+5. Only then move to the follow graph and feed baseline work in Milestones 3 and beyond.
 
-**Definition of done for the next task:** an agreed schema and API/security contract, not a large amount of generated code.
+**Definition of done for the next task:** a verified, green auth/profile/post slice with documented remaining risks and a clear path into the follow/feed milestones.
 
 ## Weekly / milestone log template
 

@@ -10,7 +10,9 @@ class Settings(BaseSettings):
     database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
 
-    auth_jwt_secret: str | None = None
+    # Local development fallback: keep the app usable without a custom .env entry
+    # while still requiring a real secret in production or non-local environments.
+    auth_jwt_secret: str = "dev-local-auth-secret-change-before-prod-1234567890"
     auth_jwt_issuer: str = "instagram-backend"
     auth_jwt_audience: str = "instagram-api"
     auth_access_token_ttl_seconds: int = 900
