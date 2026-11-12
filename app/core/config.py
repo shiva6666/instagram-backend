@@ -1,9 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-JWT_SECRET_PLACEHOLDER = "replace-with-a-random-secret-at-least-32-bytes"
-
-
 class Settings(BaseSettings):
     app_name: str = "Instagram Backend"
     app_version: str = "0.1.0"
@@ -35,7 +32,7 @@ def validate_security_settings() -> None:
     if (
         secret is None
         or len(secret.encode("utf-8")) < 32
-        or secret == JWT_SECRET_PLACEHOLDER
+        or secret == "replace-with-a-random-secret-at-least-32-bytes"
     ):
         raise RuntimeError(
             "AUTH_JWT_SECRET must be explicitly configured with a random "
