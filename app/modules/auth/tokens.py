@@ -7,7 +7,7 @@ from uuid import UUID
 
 import jwt
 
-from app.core.config import settings
+from app.core.config import JWT_SECRET_PLACEHOLDER, settings
 
 
 class InvalidAccessTokenError(ValueError):
@@ -16,8 +16,14 @@ class InvalidAccessTokenError(ValueError):
 
 def _jwt_secret() -> str:
     secret = settings.auth_jwt_secret
-    if secret is None or len(secret.encode("utf-8")) < 32:
-        raise RuntimeError("AUTH_JWT_SECRET must be configured with at least 32 bytes")
+    if (
+        secret is None
+        or len(secret.encode("utf-8")) < 32
+        or secret == JWT_SECRET_PLACEHOLDER
+    ):
+        raise RuntimeError(
+            "AUTH_JWT_SECRET must be explicitly configured with at least 32 random bytes"
+        )
     return secret
 
 
