@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +13,7 @@ from app.modules.follows.models import (
     FollowStatus,
     FollowedUser,
 )
-from app.modules.social_graph.tables import FollowRow
-from app.modules.users.models import User
+from app.modules.social_graph.tables import FollowRow, UserBlockRow
 from app.modules.users.repository import UserRow, _to_domain
 
 
@@ -34,6 +33,10 @@ class FollowRepository(Protocol):
     async def accept_request(
         self, follower_id: UUID, following_id: UUID
     ) -> FollowRelationship | None: ...
+
+    async def is_blocked_between(
+        self, first_user_id: UUID, second_user_id: UUID
+    ) -> bool: ...
 
     async def list_followers(
         self,
@@ -65,6 +68,26 @@ def _to_relationship(row: FollowRow) -> FollowRelationship:
     )
 
 
+def _not_blocked_condition(first_user_id, second_user_id):
+    blocked = (
+        select(UserBlockRow.blocker_id)
+        .where(
+            or_(
+                and_(
+                    UserBlockRow.blocker_id == first_user_id,
+                    UserBlockRow.blocked_id == second_user_id,
+                ),
+                and_(
+                    UserBlockRow.blocker_id == second_user_id,
+                    UserBlockRow.blocked_id == first_user_id,
+                ),
+            )
+        )
+        .exists()
+    )
+    return ~blocked
+
+
 class SqlAlchemyFollowRepository:
     """PostgreSQL adapter for follow relationships."""
 
@@ -78,6 +101,7 @@ class SqlAlchemyFollowRepository:
             select(FollowRow).where(
                 FollowRow.follower_id == follower_id,
                 FollowRow.following_id == following_id,
+                _not_blocked_condition(follower_id, following_id),
             )
         )
         return _to_relationship(row) if row is not None else None
@@ -124,10 +148,30 @@ class SqlAlchemyFollowRepository:
                 FollowRow.follower_id == follower_id,
                 FollowRow.following_id == following_id,
                 FollowRow.status == FollowStatus.PENDING,
+                _not_blocked_condition(follower_id, following_id),
             )
             .values(status=FollowStatus.ACCEPTED)
         )
         return await self.get_relationship(follower_id, following_id)
+
+    async def is_blocked_between(
+        self, first_user_id: UUID, second_user_id: UUID
+    ) -> bool:
+        result = await self._session.scalar(
+            select(UserBlockRow.blocker_id).where(
+                or_(
+                    and_(
+                        UserBlockRow.blocker_id == first_user_id,
+                        UserBlockRow.blocked_id == second_user_id,
+                    ),
+                    and_(
+                        UserBlockRow.blocker_id == second_user_id,
+                        UserBlockRow.blocked_id == first_user_id,
+                    ),
+                )
+            )
+        )
+        return result is not None
 
     async def _list(
         self,
@@ -144,6 +188,7 @@ class SqlAlchemyFollowRepository:
             FollowRow.status == FollowStatus.ACCEPTED,
             UserRow.status == "active",
             UserRow.deleted_at.is_(None),
+            _not_blocked_condition(user_id, user_column),
         ]
         if cursor is not None:
             cursor_time, cursor_user_id = cursor
@@ -166,8 +211,6 @@ class SqlAlchemyFollowRepository:
                 .limit(limit + 1)
             )
         ).all()
-        from app.modules.users.repository import _to_domain
-
         return [
             FollowedUser(user=_to_domain(user_row), followed_at=follow_row.created_at)
             for follow_row, user_row in rows
@@ -205,6 +248,7 @@ class SqlAlchemyFollowRepository:
                 FollowRow.status == FollowStatus.ACCEPTED,
                 UserRow.status == "active",
                 UserRow.deleted_at.is_(None),
+                _not_blocked_condition(user_id, FollowRow.follower_id),
             )
         )
         return int(count or 0)
@@ -219,6 +263,7 @@ class SqlAlchemyFollowRepository:
                 FollowRow.status == FollowStatus.ACCEPTED,
                 UserRow.status == "active",
                 UserRow.deleted_at.is_(None),
+                _not_blocked_condition(user_id, FollowRow.following_id),
             )
         )
         return int(count or 0)
