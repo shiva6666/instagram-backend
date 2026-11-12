@@ -4,14 +4,14 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from sqlalchemy import and_, delete, exists, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.follows.models import (
+    FollowedUser,
     FollowRelationship,
     FollowStatus,
-    FollowedUser,
 )
 from app.modules.social_graph.tables import FollowRow, UserBlockRow
 from app.modules.users.repository import UserRow, _to_domain
