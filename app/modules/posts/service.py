@@ -136,9 +136,7 @@ class PostService:
         page = posts[:limit]
         if viewer.id != author.id:
             page = [
-                post
-                for post in page
-                if self._is_visible_to(post, viewer_id=viewer.id)
+                post for post in page if self._is_visible_to(post, viewer_id=viewer.id)
             ]
         return page, author, offset + limit if has_more else None
 
