@@ -16,8 +16,14 @@ class InvalidAccessTokenError(ValueError):
 
 def _jwt_secret() -> str:
     secret = settings.auth_jwt_secret
-    if secret is None or len(secret.encode("utf-8")) < 32:
-        raise RuntimeError("AUTH_JWT_SECRET must be configured with at least 32 bytes")
+    if (
+        secret is None
+        or len(secret.encode("utf-8")) < 32
+        or secret == "replace-with-a-random-secret-at-least-32-bytes"
+    ):
+        raise RuntimeError(
+            "AUTH_JWT_SECRET must be explicitly configured with at least 32 random bytes"
+        )
     return secret
 
 

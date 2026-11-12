@@ -5,6 +5,7 @@ import pytest
 from app.core.config import settings
 from app.modules.auth.tokens import (
     InvalidAccessTokenError,
+    _jwt_secret,
     create_access_token,
     decode_access_token,
     hash_refresh_token,
@@ -37,6 +38,13 @@ def test_refresh_token_fingerprint_is_not_raw_token() -> None:
     assert len(fingerprint) == 64
 
 
-def test_default_local_jwt_secret_is_long_enough() -> None:
-    assert settings.auth_jwt_secret is not None
-    assert len(settings.auth_jwt_secret.encode("utf-8")) >= 32
+@pytest.mark.parametrize(
+    "secret", [None, "short", "replace-with-a-random-secret-at-least-32-bytes"]
+)
+def test_missing_weak_or_example_jwt_secret_is_rejected(
+    monkeypatch: pytest.MonkeyPatch, secret: str | None
+) -> None:
+    monkeypatch.setattr(settings, "auth_jwt_secret", secret)
+
+    with pytest.raises(RuntimeError, match="AUTH_JWT_SECRET"):
+        _jwt_secret()

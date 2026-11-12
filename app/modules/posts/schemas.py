@@ -36,5 +36,4 @@ class PostResponse(BaseModel):
 class PostListResponse(BaseModel):
     posts: list[PostResponse]
     limit: int
-    offset: int
-    next_offset: int | None
+    next_cursor: str | None

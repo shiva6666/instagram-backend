@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import json
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -20,6 +22,34 @@ class PostForbiddenError(PermissionError):
 
 class UserUnavailableError(PermissionError):
     """Raised when the acting user's account cannot create or delete posts."""
+
+
+class InvalidPostCursorError(ValueError):
+    """Raised when an author-post cursor is malformed."""
+
+
+def _encode_post_cursor(post: Post) -> str:
+    payload = {
+        "created_at": post.created_at.isoformat(),
+        "post_id": str(post.id),
+    }
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_post_cursor(cursor: str | None) -> tuple[datetime, UUID] | None:
+    if cursor is None:
+        return None
+    try:
+        padded = cursor + "=" * (-len(cursor) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+        created_at = datetime.fromisoformat(payload["created_at"])
+        post_id = UUID(payload["post_id"])
+        if created_at.tzinfo is None:
+            raise ValueError("cursor timestamp must include timezone")
+        return created_at, post_id
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+        raise InvalidPostCursorError("invalid post cursor") from error
 
 
 def _ensure_active(user: User) -> None:
@@ -117,9 +147,9 @@ class PostService:
         *,
         username: str,
         viewer: User,
-        offset: int,
+        cursor: str | None,
         limit: int,
-    ) -> tuple[list[Post], User, int | None]:
+    ) -> tuple[list[Post], User, str | None]:
         author = await self._users.get_by_username(username.strip().lower())
         if (
             author is None
@@ -129,14 +159,21 @@ class PostService:
             raise PostNotFoundError("author was not found")
 
         await self._assert_author_visible(viewer.id, author)
-        posts = await self._posts.list_by_author(author.id, offset=offset, limit=limit)
+        decoded_cursor = _decode_post_cursor(cursor)
+        before_created_at, before_id = (
+            decoded_cursor if decoded_cursor is not None else (None, None)
+        )
+        posts = await self._posts.list_by_author(
+            author.id,
+            viewer_id=viewer.id,
+            before_created_at=before_created_at,
+            before_id=before_id,
+            limit=limit,
+        )
         has_more = len(posts) > limit
         page = posts[:limit]
-        if viewer.id != author.id:
-            page = [
-                post for post in page if self._is_visible_to(post, viewer_id=viewer.id)
-            ]
-        return page, author, offset + limit if has_more else None
+        next_cursor = _encode_post_cursor(page[-1]) if has_more and page else None
+        return page, author, next_cursor
 
     async def delete_post(self, *, post_id: UUID, actor: User) -> None:
         author_actor = await self._users.get_by_id(actor.id)

@@ -21,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from app.core.db import Base
 from app.modules.posts.models import Post, PostImage
+from app.modules.social_graph.tables import FollowRow, UserBlockRow
 
 
 class PostRepository(Protocol):
@@ -29,7 +30,13 @@ class PostRepository(Protocol):
     async def get_by_id(self, post_id: UUID) -> Post | None: ...
 
     async def list_by_author(
-        self, author_id: UUID, *, offset: int, limit: int
+        self,
+        author_id: UUID,
+        *,
+        viewer_id: UUID,
+        before_created_at: datetime | None,
+        before_id: UUID | None,
+        limit: int,
     ) -> list[Post]: ...
 
     async def soft_delete(self, post_id: UUID, *, deleted_at: datetime) -> None: ...
@@ -82,42 +89,6 @@ class PostImageRow(Base):
     post: Mapped[PostRow] = relationship(back_populates="images")
 
 
-class UserFollowRow(Base):
-    """Read adapter for the follows table created by the initial migration."""
-
-    __tablename__ = "follows"
-
-    follower_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    followee_id: Mapped[UUID] = mapped_column(
-        "following_id",
-        PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    status: Mapped[str] = mapped_column(String(16), nullable=False)
-
-
-class UserBlockRow(Base):
-    """Minimal block edge used to prevent either side seeing the other's posts."""
-
-    __tablename__ = "user_blocks"
-
-    blocker_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    blocked_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-
-
 def _to_domain(row: PostRow) -> Post:
     return Post(
         id=row.id,
@@ -168,18 +139,39 @@ class SqlAlchemyPostRepository:
         return _to_domain(row) if row is not None else None
 
     async def list_by_author(
-        self, author_id: UUID, *, offset: int, limit: int
+        self,
+        author_id: UUID,
+        *,
+        viewer_id: UUID,
+        before_created_at: datetime | None,
+        before_id: UUID | None,
+        limit: int,
     ) -> list[Post]:
+        conditions = [
+            PostRow.user_id == author_id,
+            PostRow.deleted_at.is_(None),
+        ]
+        # Apply visibility in PostgreSQL before LIMIT so hidden rows cannot
+        # produce short or empty pages.
+        if viewer_id != author_id:
+            conditions.append(PostRow.is_private.is_(False))
+        if before_created_at is not None and before_id is not None:
+            conditions.append(
+                or_(
+                    PostRow.created_at < before_created_at,
+                    and_(
+                        PostRow.created_at == before_created_at,
+                        PostRow.id < before_id,
+                    ),
+                )
+            )
+
         rows = (
             await self._session.scalars(
                 select(PostRow)
                 .options(selectinload(PostRow.images))
-                .where(
-                    PostRow.user_id == author_id,
-                    PostRow.deleted_at.is_(None),
-                )
+                .where(*conditions)
                 .order_by(PostRow.created_at.desc(), PostRow.id.desc())
-                .offset(offset)
                 .limit(limit + 1)
             )
         ).all()
@@ -195,10 +187,10 @@ class SqlAlchemyPostRepository:
 
     async def is_following(self, follower_id: UUID, followee_id: UUID) -> bool:
         result = await self._session.scalar(
-            select(UserFollowRow.follower_id).where(
-                UserFollowRow.follower_id == follower_id,
-                UserFollowRow.followee_id == followee_id,
-                UserFollowRow.status == "accepted",
+            select(FollowRow.follower_id).where(
+                FollowRow.follower_id == follower_id,
+                FollowRow.following_id == followee_id,
+                FollowRow.status == "accepted",
             )
         )
         return result is not None
