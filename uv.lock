@@ -461,7 +461,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29" },
     { name = "email-validator", specifier = ">=2.1" },
     { name = "faker", marker = "extra == 'dev'", specifier = ">=37.0" },
-    { name = "fastapi", specifier = ">=0.110" },
+    { name = "fastapi", specifier = ">=0.121.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.7" },
