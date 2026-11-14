@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
-from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
