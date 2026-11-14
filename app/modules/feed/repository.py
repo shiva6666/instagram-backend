@@ -114,7 +114,7 @@ class SqlAlchemyFeedRepository:
         image_statement = text(
             """
             SELECT post_id, position, url
-            FROM post_images
+            FROM post_media
             WHERE post_id IN :post_ids
             ORDER BY post_id, position
             """
