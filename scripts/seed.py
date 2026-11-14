@@ -160,7 +160,8 @@ def build_posts(
                 f"https://images.unsplash.com/{image_id}"
                 "?auto=format&fit=crop&w=1080&q=80"
             )
-            images.append((post_id, position, url))
+            media_id = stable_id("media", f"{post_id}:{position}")
+            images.append((media_id, author["id"], post_id, position, url))
 
     return posts, images, post_ids
 
@@ -302,8 +303,16 @@ async def seed(args: argparse.Namespace) -> None:
             if images:
                 await connection.executemany(
                     """
-                    INSERT INTO post_images (post_id, position, url)
-                    VALUES ($1, $2, $3)
+                    INSERT INTO media (id, owner_id, object_key, url, status)
+                    VALUES ($1, $2, NULL, $5, 'ready')
+                    ON CONFLICT (id) DO NOTHING
+                    """,
+                    images,
+                )
+                await connection.executemany(
+                    """
+                    INSERT INTO post_media (media_id, post_id, position, url)
+                    VALUES ($1, $3, $4, $5)
                     ON CONFLICT (post_id, position) DO NOTHING
                     """,
                     images,
@@ -340,8 +349,8 @@ async def seed(args: argparse.Namespace) -> None:
                      WHERE user_id = ANY($1::uuid[])) AS auth_identities,
                     (SELECT count(*) FROM posts
                      WHERE id = ANY($2::uuid[])) AS posts,
-                    (SELECT count(*) FROM post_images
-                     WHERE post_id = ANY($2::uuid[])) AS post_images,
+                    (SELECT count(*) FROM post_media
+                     WHERE post_id = ANY($2::uuid[])) AS post_media,
                     (SELECT count(*) FROM follows
                      WHERE follower_id = ANY($1::uuid[])
                        AND following_id = ANY($1::uuid[])) AS follows
@@ -358,7 +367,7 @@ async def seed(args: argparse.Namespace) -> None:
         f"users={counts['users']}, "
         f"auth_identities={counts['auth_identities']}, "
         f"posts={counts['posts']}, "
-        f"post_images={counts['post_images']}, "
+        f"post_media={counts['post_media']}, "
         f"follows={counts['follows']}"
     )
     print("Demo login: demo_alice@example.com")
