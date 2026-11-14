@@ -187,7 +187,7 @@ def build_follows(
         ("demo_charlie", "demo_david"),
     )
     username_to_id = {str(user["username"]): user["id"] for user in users}
-    for follower_name, following_name in demo_edges:
+    for follower_name, following_name in demo_edges[:target]:
         follower_id = username_to_id[follower_name]
         following_id = username_to_id[following_name]
         status = "pending" if following_id in private_user_ids else "accepted"
