@@ -2,7 +2,7 @@
 
 A learning-focused, Instagram-style backend built with **FastAPI** as a modular monolith. The long-term goal is to understand and build the backend systems behind a social media feed: media upload and processing, follow graphs, feed generation, ranking, notifications, and analytics.
 
-> **Project status:** This repository is being built incrementally. The architecture below is the target system design and learning roadmap—not a claim that every service or pipeline is already implemented. See [Roadmap.md](Roadmap.md) for delivery status.
+> **Project status:** This repository is being built incrementally. The architecture below is the target system design and learning roadmap—not a claim that every service or pipeline is already completed. See [Roadmap.md](Roadmap.md) for delivery status.
 
 ## Product vision
 
@@ -149,6 +149,29 @@ Press `Ctrl+C` to stop both development servers. PostgreSQL and Redis remain run
 
 The frontend's Vite proxy forwards `/api` requests to FastAPI, so local development does not require permissive CORS configuration.
 
+## Seed local demo data
+
+After the database migrations have run, execute:
+
+```bash
+make seed
+```
+
+The seeder creates a small dataset in PostgreSQL: 30 users, 180 posts, post-image metadata, accepted and pending follows, and a couple of block relationships. It also creates password identities for all demo users.
+
+Use these local-only credentials in the frontend:
+
+| Email | Password |
+|---|---|
+| `demo_alice@example.test` | `DemoPassword123!` |
+| `demo_bob@example.test` | `DemoPassword123!` |
+| `demo_charlie@example.test` | `DemoPassword123!` |
+| `demo_david@example.test` | `DemoPassword123!` |
+
+The remaining generated users use the same password and have emails in the form `demo_user_05@example.test`.
+
+The seed is deterministic and additive: rerunning it does not duplicate seeded records or delete existing data. It does not populate Redis, MinIO, or Redpanda; those systems should be populated through the application workflows that use them.
+
 ## Authentication (first implementation)
 
 The password-based auth slice exposes these routes under `/api/v1`:
@@ -171,8 +194,6 @@ make lint
 make typecheck
 make migrate
 ```
-
-`make seed` is intentionally a placeholder until the first domain model and its seed data are defined.
 
 ## Learning path
 
