@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    build: ./backend
     environment:
       APP_NAME: ${APP_NAME:-Instagram Backend}
       APP_VERSION: ${APP_VERSION:-0.1.0}

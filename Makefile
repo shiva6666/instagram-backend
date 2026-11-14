@@ -10,22 +10,22 @@ logs:
 	docker compose logs -f
 
 dev:
-	bash scripts/dev.sh
+	bash backend/scripts/dev.sh
 
 test:
-	uv run pytest
+	cd backend && uv run pytest
 
 lint:
-	uv run ruff check .
+	cd backend && uv run ruff check app tests scripts migrations
 
 format:
-	uv run ruff format .
+	cd backend && uv run ruff format app tests scripts migrations
 
 typecheck:
-	uv run mypy app/core
+	cd backend && uv run mypy app/core
 
 migrate:
-	uv run alembic upgrade head
+	cd backend && uv run alembic upgrade head
 
 seed:
-	uv run --extra dev python scripts/seed.py
+	cd backend && uv run --extra dev python scripts/seed.py
