@@ -52,7 +52,7 @@ def main() -> None:
     args = parser.parse_args()
     base_url = args.base_url.rstrip("/")
     suffix = secrets.token_hex(6)
-    email = f"smoke-{suffix}@example.test"
+    email = f"smoke-{suffix}@example.com"
     password = "a-strong-smoke-password"
 
     status, registered = request_json(

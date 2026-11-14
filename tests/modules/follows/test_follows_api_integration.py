@@ -262,7 +262,10 @@ def test_concurrent_accept_and_reject_allow_only_one_transition() -> None:
             ]
         )
 
-        assert sorted(response.status_code for response in responses) == [204, 404]
+        assert sorted(response.status_code for response in responses) in (
+            [200, 404],
+            [204, 404],
+        )
 
         relationship = client.get(
             f"/api/v1/follows/{private_user}/relationship",

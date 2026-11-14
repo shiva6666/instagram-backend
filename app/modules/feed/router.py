@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.dependencies import get_current_user, get_db_session
+from app.modules.auth.dependencies import DatabaseSession, get_current_user
 from app.modules.feed.repository import SqlAlchemyFeedRepository
 from app.modules.feed.schemas import FeedResponse
 from app.modules.feed.service import FeedService, InvalidFeedCursorError
@@ -16,7 +15,7 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 
 
 def get_feed_service(
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> FeedService:
     return FeedService(SqlAlchemyFeedRepository(session))
 

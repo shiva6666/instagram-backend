@@ -25,9 +25,14 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
             raise
 
 
+DatabaseSession = Annotated[
+    AsyncSession, Depends(get_db_session, scope="function")
+]
+
+
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> User:
     try:
         user_id = decode_access_token(credentials.credentials)

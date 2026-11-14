@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.modules.auth.dependencies import get_current_user, get_db_session
+from app.modules.auth.dependencies import DatabaseSession, get_current_user
 from app.modules.auth.repository import SqlAlchemyAuthRepository
 from app.modules.auth.schemas import (
     LoginRequest,
@@ -63,7 +63,7 @@ def _service(session: AsyncSession) -> AuthService:
 )
 async def register(
     payload: RegisterRequest,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> TokenResponse:
     try:
         user, access, refresh = await _service(session).register(
@@ -81,7 +81,7 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     payload: LoginRequest,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> TokenResponse:
     try:
         user, access, refresh = await _service(session).login(
@@ -99,7 +99,7 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(
     payload: RefreshRequest,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> TokenResponse:
     try:
         user, access, refresh_token = await _service(session).refresh(
@@ -123,7 +123,7 @@ async def refresh(
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     payload: LogoutRequest,
-    session: Annotated[AsyncSession, Depends(get_db_session)],
+    session: DatabaseSession,
 ) -> MessageResponse:
     await _service(session).logout(payload.refresh_token)
     return MessageResponse(message="Logged out")
