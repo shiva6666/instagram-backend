@@ -120,8 +120,10 @@ class SqlAlchemyFeedRepository:
             """
         ).bindparams(bindparam("post_ids", expanding=True))
         image_rows = (
-            await self._session.execute(image_statement, {"post_ids": post_ids})
-        ).mappings().all()
+            (await self._session.execute(image_statement, {"post_ids": post_ids}))
+            .mappings()
+            .all()
+        )
 
         images_by_post: dict[UUID, list[PostImage]] = {
             post_id: [] for post_id in post_ids
