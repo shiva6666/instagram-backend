@@ -85,7 +85,8 @@ async function request<T>(
 
   let response = await fetch(`${API_BASE}${path}`, { ...init, headers });
 
-  const isAuthEntryPoint = ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"].includes(path);\n  if (response.status === 401 && retry && refreshToken && !isAuthEntryPoint) {
+  const isAuthEntryPoint = ["/auth/login", "/auth/register", "/auth/refresh", "/auth/logout"].includes(path);
+  if (response.status === 401 && retry && refreshToken && !isAuthEntryPoint) {
     if (await rotateTokens()) {
       return request<T>(path, init, false);
     }
