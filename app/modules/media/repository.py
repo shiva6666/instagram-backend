@@ -20,7 +20,7 @@ class MediaRow(Base):
         nullable=False,
     )
     object_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     content_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     size_bytes: Mapped[int | None] = mapped_column(BigInteger(), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
