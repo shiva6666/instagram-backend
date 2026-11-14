@@ -1,4 +1,4 @@
-.PHONY: up down logs test lint format typecheck migrate seed
+.PHONY: up down logs dev test lint format typecheck migrate seed
 
 up:
 	docker compose up --build -d
@@ -8,6 +8,9 @@ down:
 
 logs:
 	docker compose logs -f
+
+dev:
+	bash scripts/dev.sh
 
 test:
 	uv run pytest
