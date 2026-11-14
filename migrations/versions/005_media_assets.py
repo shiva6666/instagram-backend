@@ -26,7 +26,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("object_key", sa.String(512), nullable=True),
-        sa.Column("url", sa.String(2048), nullable=False),
+        sa.Column("url", sa.String(2048), nullable=True),
         sa.Column("content_type", sa.String(100), nullable=True),
         sa.Column("size_bytes", sa.BigInteger(), nullable=True),
         sa.Column("status", sa.String(20), nullable=False, server_default="ready"),
