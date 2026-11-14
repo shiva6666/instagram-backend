@@ -105,9 +105,7 @@ class SqlAlchemyFeedRepository:
             LIMIT :limit
             """
         )
-        rows = (
-            await self._session.execute(statement, params)
-        ).mappings().all()
+        rows = (await self._session.execute(statement, params)).mappings().all()
 
         if not rows:
             return []
