@@ -3,7 +3,7 @@ from __future__ import annotations
 import secrets
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi.testclient import TestClient
 
@@ -172,7 +172,7 @@ def test_follower_list_uses_cursor_without_duplicates() -> None:
 def test_concurrent_duplicate_follows_create_one_relationship() -> None:
     with TestClient(app) as client:
         target, _ = _register(client)
-        follower, follower_token = _register(client)
+        _follower, follower_token = _register(client)
 
         responses = _run_concurrently(
             [
