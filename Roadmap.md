@@ -18,36 +18,38 @@ A user can register, authenticate, create a profile, follow other users, publish
 - Update the **Current repository status** section and checkboxes only after verifying code and tests on the default branch.
 - Use AI tools for review, test ideas, and boilerplate; understand and own the design and critical implementation.
 
-## Current repository status (verified against the repository as of 2026-11-12)
+## Current repository status (verified against `main` on 2026-11-14)
 
-Validation run: `uv run pytest tests/modules/users tests/modules/auth/test_tokens.py tests/modules/auth/test_api_integration.py -q` → 33 passed.
+This is a code-level status update based on the current module structure and the merged posts/follow-graph work. It does not claim that every edge case, deployment path, or performance target has been proven.
 
 | Area | Current state | Next action |
 |---|---|---|
-| FastAPI application and health route | Present; health/readiness smoke path exists | Keep dependency checks and smoke flows green |
-| Core configuration and async SQLAlchemy setup | Present | Document and enforce transaction/session conventions across modules |
-| PostgreSQL migrations | Present: users, posts, follows, auth identities, refresh tokens | Review schema constraints and indexes against actual query patterns |
-| Users domain model, service, repository adapter | Present with profile APIs, status checks, and profile update behavior | Add more edge-case authorization and status tests |
-| Authentication | Present: register/login/refresh/logout and authenticated `me` route, using Argon2id + JWT + opaque refresh tokens | Close remaining proof gaps: concurrency, reuse, invalid-token coverage, and secret-handling verification |
-| Posts application module/API | Present: create/get/list-by-author/delete with owner checks and role/status gates | Hardening: visibility rules, cursor pagination, and broader PostgreSQL integration coverage |
-| Follow graph API/service | Not implemented | Build after the auth/profile/post slice is stable |
-| Feed | Not implemented | Start with a correct PostgreSQL chronological feed baseline |
-| Media processing, event consumers, ranking | Not implemented | Defer until the synchronous product path is reliable |
+| FastAPI application and health route | Present | Keep smoke checks and dependency health behavior reliable |
+| Core configuration and async SQLAlchemy setup | Present | Keep session ownership and transaction boundaries consistent |
+| PostgreSQL migrations | Present for users, posts, follows/social graph, auth identities, and refresh tokens | Review constraints and indexes against feed and relationship query plans |
+| Users and profiles | Implemented: profile APIs, status checks, and profile update behavior | Continue authorization and account-state edge-case tests |
+| Authentication | Implemented: register/login/refresh/logout and authenticated user route; Argon2id, JWT access tokens, opaque refresh tokens | Close remaining concurrency, reuse, invalid-token, and secret-handling proof gaps |
+| Posts | Implemented: create/get/list-by-author/soft-delete, ownership checks, visibility handling, and stable cursor pagination | Add/extend PostgreSQL integration and concurrency coverage where needed |
+| Follow graph | Implemented: follow/unfollow, private-account requests, accept/reject, relationship lookup, follower/following lists, counts, and block-aware checks | Add focused concurrency/state-transition tests and review query plans |
+| Social graph persistence | Present; follow and block rows are shared through the social-graph persistence module | Preserve clear module boundaries and avoid leaking ORM rows across modules |
+| Home feed | Not implemented | Design and build a PostgreSQL chronological feed using accepted follow relationships |
+| Media upload/processing, durable event consumers, ranking | Not implemented | Defer until the core feed and media lifecycle requirements are defined |
 
-This is a code-level snapshot, not a claim that every infrastructure container or roadmap experiment is complete. Re-check it when the roadmap changes.
+Re-check this snapshot when code or tests change. “Implemented” means the feature exists in the repository; it does not mean every production-readiness criterion below is complete.
 
 ## Improvement priorities (highest-leverage work)
 
-These are the gaps that matter most before adding more product surface area:
+The next major feature should build on the existing follow graph rather than re-implement it:
 
-- [ ] Align roadmap status to verified repository reality. Milestones should distinguish implemented, tested, and still-theoretical work.
+- [ ] Add concurrency tests for duplicate follow attempts and simultaneous acceptance of the same pending request; verify the database constraint and conditional state transition remain authoritative.
+- [ ] Define and test the race semantics between follow operations and block creation/removal.
 - [ ] Close the auth proof gaps: concurrent refresh attempts, refresh-token reuse behavior, expired/invalid token handling, and secret/logging guardrails.
-- [ ] Harden the post/profile slice with explicit visibility rules, stable pagination semantics, and PostgreSQL-backed edge-case tests.
-- [ ] Make repo/service/router responsibilities explicit in docs and reviews: repositories persist data, services encode business rules, routers translate HTTP requests/responses.
-- [ ] Add a lightweight quality gate for every milestone: unit tests, PostgreSQL integration tests, concurrency tests, benchmark evidence, and security review for auth flows.
-- [ ] Keep the social graph and feed work behind a clean follow-up milestone once auth and docs are verified.
+- [ ] Design the home-feed visibility contract before writing the query: accepted follows, own posts, private accounts, blocks in both directions, deleted posts, and inactive authors.
+- [ ] Build the first feed as a PostgreSQL query with keyset pagination; filter visibility before applying the page limit.
+- [ ] Add PostgreSQL integration tests and capture query plans before considering Redis or asynchronous fan-out.
+- [ ] Keep router/service/repository responsibilities explicit and preserve module boundaries as the feed composes existing modules.
 
-These improvements reduce the risk of building features on an unproven foundation and keep the roadmap honest about what is already working versus what is still aspirational.
+These priorities close correctness gaps in the existing social graph and create a measured, understandable foundation for the feed.
 
 ## Delivery map
 
@@ -56,7 +58,7 @@ These improvements reduce the risk of building features on an unproven foundatio
 | 0 | Foundation and engineering workflow | Reliable local development and CI |
 | 1 | Authentication | Secure register/login/refresh/logout and protected route |
 | 2 | Profiles and posts | Working user and post APIs with ownership rules |
-| 3 | Social graph and baseline feed | Follow graph and cursor-paginated chronological feed |
+| 3 | Social graph and baseline feed | Follow graph implemented; PostgreSQL cursor-paginated chronological feed remains |
 | 4 | Media lifecycle | Presigned upload, validation, processing, and media delivery |
 | 5 | Reliability and performance baseline | Tests, observability, query plans, reproducible load tests |
 | 6 | Engagement and notifications | Likes/comments and asynchronous notification workflow |
@@ -136,7 +138,7 @@ A user can register and log in, access a protected endpoint, rotate a refresh to
 
 # Milestone 2 — Profiles and posts
 
-**Status:** The basic user profile and post modules are implemented in the codebase. Remaining work is mostly around hardening, visibility rules, pagination, and PostgreSQL-backed proof coverage.
+**Status:** User/profile and post modules are implemented. Posts include visibility handling and stable cursor pagination; continue adding PostgreSQL-backed edge-case and authorization coverage.
 
 ### Profiles
 
@@ -152,9 +154,9 @@ A user can register and log in, access a protected endpoint, rotate a refresh to
 - [x] Implement create, get, list-by-author, and soft-delete operations.
 - [x] Enforce owner-only post mutation using the authenticated principal.
 - [x] Define post visibility and lifecycle states before media integration.
-- [ ] Use cursor pagination for author post lists.
-- [ ] Add database constraints and indexes justified by the actual query patterns.
-- [ ] Add integration tests using PostgreSQL.
+- [x] Use stable keyset pagination for author post lists, with a deterministic tie-breaker.
+- [x] Add database constraints and indexes for the implemented post query patterns.
+- [ ] Continue expanding PostgreSQL integration tests for visibility, authorization, and pagination edge cases.
 
 ### Exit criteria
 
@@ -164,23 +166,29 @@ Authenticated users can manage their own profile and posts; other users cannot m
 
 # Milestone 3 — Social graph and chronological feed
 
-### Follow graph
+**Status:** The follow graph is implemented. The remaining work in this milestone is correctness hardening and the first home-feed implementation.
 
-- [ ] Add follow/unfollow service and endpoints.
-- [ ] Make follow operations idempotent; enforce no self-follow and unique follower/followee pairs in PostgreSQL.
-- [ ] Decide private-account follow request behavior and model pending vs accepted relationships.
-- [ ] Add followers/following lists with cursor pagination.
-- [ ] Add block semantics before feed visibility is considered complete.
-- [ ] Test duplicate requests, unfollow, private profiles, blocks, and deleted/suspended accounts.
+### Follow graph — implemented
 
-### Baseline feed
+- [x] Add follow/unfollow service and endpoints.
+- [x] Make follow creation idempotent and enforce unique directed follower/followee pairs in PostgreSQL.
+- [x] Model public-account follows and private-account pending requests, including accept/reject behavior.
+- [x] Add follower/following lists with cursor pagination and relationship counts.
+- [x] Integrate block checks into relationship operations.
+- [ ] Add concurrency tests for duplicate follow attempts and simultaneous acceptance of one pending request.
+- [ ] Define and test race behavior when a block is created while a follow operation is in progress.
+- [ ] Extend tests for deleted/suspended accounts and relationship state transitions.
 
-- [ ] Implement a PostgreSQL-only chronological feed from accepted follow relationships.
-- [ ] Define feed visibility rules centrally: private account, block, deleted post, suspended author.
-- [ ] Use keyset/cursor pagination with a stable tie-breaker; avoid offset pagination for the feed.
-- [ ] Batch-hydrate post and author data; prevent N+1 queries.
-- [ ] Test duplicate-free pagination while new posts are being created.
-- [ ] Record `EXPLAIN (ANALYZE, BUFFERS)` plans and a reproducible baseline for realistic seeded data.
+### Baseline feed — next feature
+
+- [ ] Design a PostgreSQL-only chronological feed containing the viewer's own posts and posts from accounts they follow with accepted relationships.
+- [ ] Define visibility rules: private accounts, blocks in both directions, deleted posts, inactive/suspended authors, and any post-level visibility state.
+- [ ] Implement the candidate query without an N+1 query per followed account; prefer a set-based join/EXISTS approach.
+- [ ] Apply all eligibility/visibility filters in SQL before ordering and limiting the page.
+- [ ] Use keyset pagination ordered by `(created_at, id)` with a stable cursor predicate.
+- [ ] Batch-hydrate author and media data; avoid multiplying post rows when joining one-to-many data.
+- [ ] Test duplicate-free pagination, equal timestamps, empty feeds, and new posts arriving between page requests.
+- [ ] Add indexes only after inspecting representative query plans; record `EXPLAIN (ANALYZE, BUFFERS)` for realistic seeded data.
 
 ### Exit criteria
 
@@ -367,17 +375,21 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 - [ ] Benchmarks include setup, dataset, command, and before/after results.
 - [ ] Failure drills include symptom, trigger, impact, recovery, and follow-up action.
 
-## Immediate next task: close the auth proof gaps and harden the profile/post slice
+## Immediate next task: design the PostgreSQL home feed
 
-The current codebase already contains the first-pass auth and profile/post implementations. The next work is not a blank-slate design exercise; it is to close the remaining proof and hardening gaps:
+The follow graph and stabilized post listing now exist. The next major feature is the first home feed; do not start with Redis, Kafka/Redpanda, or fan-out workers.
 
-1. Finish the auth test matrix: unit coverage, invalid/expired token cases, token reuse, concurrent refresh behavior, and secret-handling checks.
-2. Verify the existing registration/login/refresh/logout flow against PostgreSQL under real CI conditions and fix any failing edge cases.
-3. Harden the profile and post module with explicit visibility rules, ownership enforcement, and edge-case tests (suspended accounts, private profiles, user-not-found, and unauthorized mutations).
-4. Decide whether to keep the current offset-based author listing or move to a stable cursor strategy before the feed layer is introduced.
-5. Only then move to the follow graph and feed baseline work in Milestones 3 and beyond.
+1. First, add focused concurrency tests for duplicate follow creation and simultaneous acceptance. Confirm that PostgreSQL constraints and conditional updates—not a service-level check-then-insert—protect the invariants.
+2. Write the feed contract and pseudocode before implementation. Include own posts plus posts from accepted follows, and specify private-account, block, deletion, and inactive-author behavior.
+3. Design a set-based SQL query. Avoid one query per followed account; visibility filtering must happen before `ORDER BY` and `LIMIT`.
+4. Use keyset pagination ordered by `(created_at, id)`, including the matching cursor predicate and a deterministic tie-breaker.
+5. Plan author/media hydration so the response does not introduce N+1 queries or duplicate posts through one-to-many joins.
+6. Add PostgreSQL integration tests for access rules, equal timestamps, empty pages, and pagination while new posts are inserted.
+7. Inspect the query with `EXPLAIN (ANALYZE, BUFFERS)` on seeded data before deciding whether indexes need changing.
 
-**Definition of done for the next task:** a verified, green auth/profile/post slice with documented remaining risks and a clear path into the follow/feed milestones.
+Keep the auth concurrency/reuse and secret-handling gaps visible as parallel hardening work, but do not let them obscure the next product milestone.
+
+**Definition of done for the next task:** a documented feed contract and query design reviewed against the visibility rules, followed by a tested PostgreSQL implementation with stable cursor pagination and a recorded performance baseline.
 
 ## Weekly / milestone log template
 
