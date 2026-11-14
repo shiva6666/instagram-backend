@@ -18,7 +18,7 @@ class Media:
     id: UUID
     owner_id: UUID
     object_key: str | None
-    url: str
+    url: str | None
     content_type: str | None
     size_bytes: int | None
     status: str
