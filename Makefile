@@ -1,10 +1,13 @@
-.PHONY: up down logs dev test lint format typecheck migrate seed
+.PHONY: up down stop logs dev test lint format typecheck migrate seed
 
 up:
 	docker compose up --build -d
 
 down:
 	docker compose down
+
+stop:
+	bash backend/scripts/stop.sh
 
 logs:
 	docker compose logs -f
