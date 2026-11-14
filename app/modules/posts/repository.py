@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Protocol
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     DateTime,
@@ -13,6 +13,7 @@ from sqlalchemy import (
     and_,
     or_,
     select,
+    text,
     update,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -77,7 +78,7 @@ class PostRow(Base):
 
 
 class PostImageRow(Base):
-    __tablename__ = "post_images"
+    __tablename__ = "post_media"
 
     post_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -85,6 +86,12 @@ class PostImageRow(Base):
         primary_key=True,
     )
     position: Mapped[int] = mapped_column(Integer, primary_key=True)
+    media_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("media.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,
+    )
     url: Mapped[str] = mapped_column(String(2048), nullable=False)
     post: Mapped[PostRow] = relationship(back_populates="images")
 
@@ -109,6 +116,39 @@ class SqlAlchemyPostRepository:
         self._session = session
 
     async def add(self, post: Post) -> Post:
+        image_rows: list[PostImageRow] = []
+        for image in post.images:
+            media_id = uuid4()
+            await self._session.execute(
+                text(
+                    """
+                    INSERT INTO media (
+                        id, owner_id, object_key, url, content_type,
+                        size_bytes, status, created_at, updated_at
+                    )
+                    VALUES (
+                        :id, :owner_id, NULL, :url, NULL,
+                        NULL, 'ready', :created_at, :updated_at
+                    )
+                    """
+                ),
+                {
+                    "id": media_id,
+                    "owner_id": post.user_id,
+                    "url": image.url,
+                    "created_at": post.created_at,
+                    "updated_at": post.updated_at,
+                },
+            )
+            image_rows.append(
+                PostImageRow(
+                    post_id=post.id,
+                    position=image.position,
+                    media_id=media_id,
+                    url=image.url,
+                )
+            )
+
         row = PostRow(
             id=post.id,
             user_id=post.user_id,
@@ -117,14 +157,7 @@ class SqlAlchemyPostRepository:
             created_at=post.created_at,
             updated_at=post.updated_at,
             deleted_at=post.deleted_at,
-            images=[
-                PostImageRow(
-                    post_id=post.id,
-                    position=image.position,
-                    url=image.url,
-                )
-                for image in post.images
-            ],
+            images=image_rows,
         )
         self._session.add(row)
         await self._session.flush()
