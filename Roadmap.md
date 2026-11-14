@@ -32,21 +32,31 @@ This is a code-level status update based on the current module structure and the
 | Posts | Implemented: create/get/list-by-author/soft-delete, ownership checks, visibility handling, and stable cursor pagination | Add/extend PostgreSQL integration and concurrency coverage where needed |
 | Follow graph | Implemented: follow/unfollow, private-account requests, accept/reject, relationship lookup, follower/following lists, counts, and block-aware checks | Add focused concurrency/state-transition tests and review query plans |
 | Social graph persistence | Present; follow and block rows are shared through the social-graph persistence module | Preserve clear module boundaries and avoid leaking ORM rows across modules |
-| Home feed | Not implemented | Design and build a PostgreSQL chronological feed using accepted follow relationships |
+| Home feed | Implementation proposed in open PR #5; not yet on `main` | Review visibility rules and query design, then merge after approval |
 | Media upload/processing, durable event consumers, ranking | Not implemented | Defer until the core feed and media lifecycle requirements are defined |
 
-Re-check this snapshot when code or tests change. “Implemented” means the feature exists in the repository; it does not mean every production-readiness criterion below is complete.
+### Open pull requests (not yet included in the verified `main` status)
+
+| PR | Scope | Branch status |
+|---|---|---|
+| [#4 — Follow concurrency tests](https://github.com/shiva6666/instagram-backend/pull/4) | Concurrent duplicate follow, simultaneous accept, and accept-vs-reject transition coverage | Open; latest CI run passed |
+| [#5 — PostgreSQL chronological home feed](https://github.com/shiva6666/instagram-backend/pull/5) | Set-based feed query, visibility filtering, keyset cursor pagination, batched image hydration, and integration tests | Open; latest CI run passed |
+
+These PRs are branch work, not merged repository functionality. Re-check their review status and CI before merging.
+
+Re-check this snapshot when code or tests change. “Implemented” means the feature exists in the repository; it does not mean every edge case, deployment path, or performance target has been proven.
 
 ## Improvement priorities (highest-leverage work)
 
 The next major feature should build on the existing follow graph rather than re-implement it:
 
-- [ ] Add concurrency tests for duplicate follow attempts and simultaneous acceptance of the same pending request; verify the database constraint and conditional state transition remain authoritative.
+- [x] Open PR #4 with PostgreSQL-backed tests for concurrent duplicate follows, simultaneous acceptance, and accept-vs-reject on one pending request; latest CI is green. Review and merge before treating this coverage as part of `main`.
 - [ ] Define and test the race semantics between follow operations and block creation/removal.
 - [ ] Close the auth proof gaps: concurrent refresh attempts, refresh-token reuse behavior, expired/invalid token handling, and secret/logging guardrails.
-- [ ] Design the home-feed visibility contract before writing the query: accepted follows, own posts, private accounts, blocks in both directions, deleted posts, and inactive authors.
-- [ ] Build the first feed as a PostgreSQL query with keyset pagination; filter visibility before applying the page limit.
-- [ ] Add PostgreSQL integration tests and capture query plans before considering Redis or asynchronous fan-out.
+- [x] Implement the first PostgreSQL feed on PR #5: own posts plus accepted followees, private-post filtering, blocks in both directions, deleted/inactive author filtering, keyset pagination, and batched image hydration.
+- [x] Add initial feed integration tests for visibility, cursor pagination, and malformed cursors on PR #5.
+- [ ] Review PR #5's SQL against the intended visibility contract, expand edge-case coverage, and merge only after review.
+- [ ] Capture representative `EXPLAIN (ANALYZE, BUFFERS)` plans and performance measurements before considering Redis or asynchronous fan-out.
 - [ ] Keep router/service/repository responsibilities explicit and preserve module boundaries as the feed composes existing modules.
 
 These priorities close correctness gaps in the existing social graph and create a measured, understandable foundation for the feed.
@@ -166,7 +176,7 @@ Authenticated users can manage their own profile and posts; other users cannot m
 
 # Milestone 3 — Social graph and chronological feed
 
-**Status:** The follow graph is implemented. The remaining work in this milestone is correctness hardening and the first home-feed implementation.
+**Status:** The follow graph is implemented on `main`. Follow concurrency tests are in open PR #4, and the first PostgreSQL home-feed implementation is in open PR #5. Both latest CI runs passed; neither PR is merged yet.
 
 ### Follow graph — implemented
 
@@ -175,19 +185,20 @@ Authenticated users can manage their own profile and posts; other users cannot m
 - [x] Model public-account follows and private-account pending requests, including accept/reject behavior.
 - [x] Add follower/following lists with cursor pagination and relationship counts.
 - [x] Integrate block checks into relationship operations.
-- [ ] Add concurrency tests for duplicate follow attempts and simultaneous acceptance of one pending request.
+- [x] Add concurrency tests for duplicate follow attempts, simultaneous acceptance, and competing accept/reject transitions (PR #4; pending merge).
 - [ ] Define and test race behavior when a block is created while a follow operation is in progress.
 - [ ] Extend tests for deleted/suspended accounts and relationship state transitions.
 
-### Baseline feed — next feature
+### Baseline feed — implementation in PR #5; review and hardening remain
 
-- [ ] Design a PostgreSQL-only chronological feed containing the viewer's own posts and posts from accounts they follow with accepted relationships.
-- [ ] Define visibility rules: private accounts, blocks in both directions, deleted posts, inactive/suspended authors, and any post-level visibility state.
-- [ ] Implement the candidate query without an N+1 query per followed account; prefer a set-based join/EXISTS approach.
-- [ ] Apply all eligibility/visibility filters in SQL before ordering and limiting the page.
-- [ ] Use keyset pagination ordered by `(created_at, id)` with a stable cursor predicate.
-- [ ] Batch-hydrate author and media data; avoid multiplying post rows when joining one-to-many data.
-- [ ] Test duplicate-free pagination, equal timestamps, empty feeds, and new posts arriving between page requests.
+- [x] Implement a PostgreSQL chronological feed containing the viewer's own posts and posts from accounts they follow with accepted relationships.
+- [x] Apply SQL visibility filters for private posts, blocks in both directions, deleted posts, and inactive/deleted authors.
+- [x] Use a set-based `EXISTS` query rather than one query per followed account.
+- [x] Apply eligibility/visibility filters in SQL before ordering and limiting the page.
+- [x] Use keyset pagination ordered by `(created_at, id)` with a stable `(created_at, id)` cursor predicate.
+- [x] Batch-hydrate post images separately to avoid N+1 queries and row multiplication.
+- [x] Add initial integration tests for private-account follow visibility, feed pagination, and invalid cursors.
+- [ ] Review and merge PR #5; extend tests for equal timestamps, empty feeds, block behavior, deleted/suspended authors, and new posts arriving between page requests.
 - [ ] Add indexes only after inspecting representative query plans; record `EXPLAIN (ANALYZE, BUFFERS)` for realistic seeded data.
 
 ### Exit criteria
@@ -375,21 +386,20 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 - [ ] Benchmarks include setup, dataset, command, and before/after results.
 - [ ] Failure drills include symptom, trigger, impact, recovery, and follow-up action.
 
-## Immediate next task: design the PostgreSQL home feed
+## Immediate next task: review and merge the two open PRs
 
-The follow graph and stabilized post listing now exist. The next major feature is the first home feed; do not start with Redis, Kafka/Redpanda, or fan-out workers.
+The next implementation slices are now submitted as PR #4 and PR #5. Both latest CI runs passed, but the branches are not merged into `main`.
 
-1. First, add focused concurrency tests for duplicate follow creation and simultaneous acceptance. Confirm that PostgreSQL constraints and conditional updates—not a service-level check-then-insert—protect the invariants.
-2. Write the feed contract and pseudocode before implementation. Include own posts plus posts from accepted follows, and specify private-account, block, deletion, and inactive-author behavior.
-3. Design a set-based SQL query. Avoid one query per followed account; visibility filtering must happen before `ORDER BY` and `LIMIT`.
-4. Use keyset pagination ordered by `(created_at, id)`, including the matching cursor predicate and a deterministic tie-breaker.
-5. Plan author/media hydration so the response does not introduce N+1 queries or duplicate posts through one-to-many joins.
-6. Add PostgreSQL integration tests for access rules, equal timestamps, empty pages, and pagination while new posts are inserted.
-7. Inspect the query with `EXPLAIN (ANALYZE, BUFFERS)` on seeded data before deciding whether indexes need changing.
+1. Review PR #4's concurrency tests. Confirm they preserve the existing follow integration coverage and exercise the real PostgreSQL race paths—not only sequential duplicate requests.
+2. Review PR #5's feed SQL and API contract. Verify that the actual schema column names and domain mapping match the repository, and challenge the private-account, block, inactive-author, and deleted-post rules.
+3. Expand feed tests for block filtering, empty feeds, equal timestamps, deleted/suspended authors, and pagination while new posts arrive.
+4. Merge PR #4 and PR #5 only after review and green CI; update this roadmap again after the merge.
+5. Capture representative `EXPLAIN (ANALYZE, BUFFERS)` plans and feed latency on realistically seeded PostgreSQL data.
+6. Keep auth refresh-token concurrency/reuse and secret-handling gaps visible as parallel hardening work.
 
-Keep the auth concurrency/reuse and secret-handling gaps visible as parallel hardening work, but do not let them obscure the next product milestone.
+Do not add Redis timelines, Kafka/Redpanda, fan-out workers, or ranking yet. First establish that the PostgreSQL feed is correct, understandable, and measurable.
 
-**Definition of done for the next task:** a documented feed contract and query design reviewed against the visibility rules, followed by a tested PostgreSQL implementation with stable cursor pagination and a recorded performance baseline.
+**Definition of done:** both PRs reviewed and merged, expanded PostgreSQL integration coverage green, and an initial query-plan/performance baseline recorded.
 
 ## Weekly / milestone log template
 
