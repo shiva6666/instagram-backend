@@ -6,7 +6,7 @@ A practical, learning-first plan for building the system in the repository's REA
 
 ## Product outcome
 
-A user can register, authenticate, create a profile, follow other users, publish media-backed posts, and receive a useful feed. The system should then evolve to support asynchronous processing, hybrid feed fan-out, notifications, search, ranking, and scale experiments.
+A user can register, authenticate, create a profile, follow other users, publish posts with image URLs, and receive a useful feed. The system should then evolve to support direct media uploads and processing, hybrid feed fan-out, notifications, search, ranking, and scale experiments.
 
 ## How to use this roadmap
 
@@ -20,42 +20,44 @@ A user can register, authenticate, create a profile, follow other users, publish
 
 ## Current repository status (verified against `main` on 2026-11-14)
 
-This is a code-level status update based on the current module structure and the merged posts/follow-graph work. It does not claim that every edge case, deployment path, or performance target has been proven.
+This status reflects the implemented modules, tests, and local workflows currently available. It does not claim that every edge case, deployment path, or performance target has been proven.
 
 | Area | Current state | Next action |
 |---|---|---|
-| FastAPI application and health route | Present | Keep smoke checks and dependency health behavior reliable |
-| Core configuration and async SQLAlchemy setup | Present | Keep session ownership and transaction boundaries consistent |
+| FastAPI application and health routes | Implemented; liveness and PostgreSQL/Redis readiness endpoints are available | Add bounded dependency-check timeouts |
+| Core configuration and async SQLAlchemy setup | Implemented; environment-driven settings and function-scoped request transactions | Continue reviewing transaction boundaries as modules grow |
 | PostgreSQL migrations | Present for users, posts, follows/social graph, auth identities, and refresh tokens | Review constraints and indexes against feed and relationship query plans |
 | Users and profiles | Implemented: profile APIs, status checks, and profile update behavior | Continue authorization and account-state edge-case tests |
-| Authentication | Implemented: register/login/refresh/logout and authenticated user route; Argon2id, JWT access tokens, opaque refresh tokens | Close remaining concurrency, reuse, invalid-token, and secret-handling proof gaps |
-| Posts | Implemented: create/get/list-by-author/soft-delete, ownership checks, visibility handling, and stable cursor pagination | Add/extend PostgreSQL integration and concurrency coverage where needed |
-| Follow graph | Implemented: follow/unfollow, private-account requests, accept/reject, relationship lookup, follower/following lists, counts, and block-aware checks | Add focused concurrency/state-transition tests and review query plans |
+| Authentication | Implemented: register/login/refresh/logout and authenticated user route; Argon2id, JWT access tokens, opaque refresh tokens | Add missing invalid-credential, refresh-concurrency, reuse, and secret-handling proof |
+| Posts | Implemented: create/get/list-by-author/soft-delete, ownership checks, visibility handling, and stable cursor pagination | Extend PostgreSQL integration coverage for authorization and pagination edge cases |
+| Follow graph | Implemented: public/private follows, requests, lists, counts, blocks, and PostgreSQL concurrency tests | Test races between follow operations and block changes; review query plans |
 | Social graph persistence | Present; follow and block rows are shared through the social-graph persistence module | Preserve clear module boundaries and avoid leaking ORM rows across modules |
-| Home feed | Implementation proposed in open PR #5; not yet on `main` | Review visibility rules and query design, then merge after approval |
-| Media upload/processing, durable event consumers, ranking | Not implemented | Defer until the core feed and media lifecycle requirements are defined |
+| Home feed | Implemented on `main`: PostgreSQL chronological feed with visibility filtering, cursor pagination, and batched image hydration | Expand edge-case coverage and record a query-plan/performance baseline |
+| Web frontend | React/Vite client integrated with `/api/v1` through the development proxy; auth, feed, profiles, follows, and URL-based posts are implemented | Add UI-level tests; likes, comments, direct uploads, and profile editing await backend APIs |
+| Local development and demo data | `make dev` starts the local stack; `make seed` creates 30 users, 180 posts, image metadata, 150 follows, and block relationships. Reruns and demo login were verified locally | Keep seed assumptions aligned with future performance datasets |
+| Media upload/processing, durable event consumers, ranking | Not implemented | Defer until the core media lifecycle and feed requirements are defined |
 
-### Open pull requests (not yet included in the verified `main` status)
+### Recently merged implementation slices
 
 | PR | Scope | Branch status |
 |---|---|---|
-| [#4 — Follow concurrency tests](https://github.com/shiva6666/instagram-backend/pull/4) | Concurrent duplicate follow, simultaneous accept, and accept-vs-reject transition coverage | Open; latest CI run passed |
-| [#5 — PostgreSQL chronological home feed](https://github.com/shiva6666/instagram-backend/pull/5) | Set-based feed query, visibility filtering, keyset cursor pagination, batched image hydration, and integration tests | Open; latest CI run passed |
+| [#4 — Follow concurrency tests](https://github.com/shiva6666/instagram-backend/pull/4) | Concurrent duplicate follow, simultaneous accept, and accept-vs-reject transition coverage | Merged |
+| [#5 — PostgreSQL chronological home feed](https://github.com/shiva6666/instagram-backend/pull/5) | Set-based feed query, visibility filtering, keyset cursor pagination, batched image hydration, and integration tests | Merged |
+| [#7 — Local development workflow](https://github.com/shiva6666/instagram-backend/pull/7) | Combined local API/frontend launcher and documented setup | Merged |
+| [#8 — Repeatable demo seed](https://github.com/shiva6666/instagram-backend/pull/8) | Small additive dataset and documented demo accounts | Merged; runtime validation and follow-up fixes verified locally |
 
-These PRs are branch work, not merged repository functionality. Re-check their review status and CI before merging.
-
-Re-check this snapshot when code or tests change. “Implemented” means the feature exists in the repository; it does not mean every edge case, deployment path, or performance target has been proven.
+“Implemented” means the feature exists in the repository; it does not mean every edge case, deployment path, or performance target has been proven. Re-check this snapshot when code or tests change.
 
 ## Improvement priorities (highest-leverage work)
 
 The next major feature should build on the existing follow graph rather than re-implement it:
 
-- [x] Open PR #4 with PostgreSQL-backed tests for concurrent duplicate follows, simultaneous acceptance, and accept-vs-reject on one pending request; latest CI is green. Review and merge before treating this coverage as part of `main`.
+- [x] Merge PR #4's PostgreSQL-backed tests for concurrent duplicate follows, simultaneous acceptance, and accept-vs-reject on one pending request.
 - [ ] Define and test the race semantics between follow operations and block creation/removal.
-- [ ] Close the auth proof gaps: concurrent refresh attempts, refresh-token reuse behavior, expired/invalid token handling, and secret/logging guardrails.
-- [x] Implement the first PostgreSQL feed on PR #5: own posts plus accepted followees, private-post filtering, blocks in both directions, deleted/inactive author filtering, keyset pagination, and batched image hydration.
-- [x] Add initial feed integration tests for visibility, cursor pagination, and malformed cursors on PR #5.
-- [ ] Review PR #5's SQL against the intended visibility contract, expand edge-case coverage, and merge only after review.
+- [ ] Close the auth proof gaps: wrong-password and expired-token tests, concurrent refresh attempts, refresh-token reuse behavior, and secret/logging guardrails.
+- [x] Merge the first PostgreSQL feed from PR #5: own posts plus accepted followees, private-post filtering, blocks in both directions, deleted/inactive author filtering, keyset pagination, and batched image hydration.
+- [x] Add initial feed integration tests for visibility, cursor pagination, and malformed cursors.
+- [ ] Expand feed edge-case coverage for equal timestamps, block behavior, deleted/suspended authors, and new posts arriving between pages.
 - [ ] Capture representative `EXPLAIN (ANALYZE, BUFFERS)` plans and performance measurements before considering Redis or asynchronous fan-out.
 - [ ] Keep router/service/repository responsibilities explicit and preserve module boundaries as the feed composes existing modules.
 
@@ -68,7 +70,7 @@ These priorities close correctness gaps in the existing social graph and create 
 | 0 | Foundation and engineering workflow | Reliable local development and CI |
 | 1 | Authentication | Secure register/login/refresh/logout and protected route |
 | 2 | Profiles and posts | Working user and post APIs with ownership rules |
-| 3 | Social graph and baseline feed | Follow graph implemented; PostgreSQL cursor-paginated chronological feed remains |
+| 3 | Social graph and baseline feed | Follow graph and PostgreSQL cursor-paginated chronological feed implemented; edge-case and performance proof remains |
 | 4 | Media lifecycle | Presigned upload, validation, processing, and media delivery |
 | 5 | Reliability and performance baseline | Tests, observability, query plans, reproducible load tests |
 | 6 | Engagement and notifications | Likes/comments and asynchronous notification workflow |
@@ -80,17 +82,17 @@ These priorities close correctness gaps in the existing social graph and create 
 
 # Milestone 0 — Foundation and workflow
 
-**Status:** Core scaffold exists. Verify each item before marking it complete.
+**Status:** Core scaffold, one-command local development, CI checks, and basic health endpoints are implemented. Clean migration downgrade and bounded readiness checks remain unverified.
 
 ### Build
 
-- [x] Confirm one documented command starts the required local dependencies and API.
+- [x] Confirm one documented command starts the required local dependencies, API, and frontend.
 - [x] Confirm configuration is environment-driven; no secrets are committed.
 - [ ] Confirm Alembic upgrade and downgrade work against a clean PostgreSQL database.
 - [x] Define a consistent async SQLAlchemy session and transaction boundary convention.
 - [x] Ensure application lifespan closes database and Redis resources reliably.
 - [ ] Ensure readiness checks dependencies with bounded timeouts; liveness does not depend on them.
-- [x] Keep Ruff, mypy, and pytest checks in CI; add PostgreSQL-backed integration tests.
+- [x] Run Ruff, mypy, and pytest in CI, including PostgreSQL-backed integration tests.
 - [x] Add a small smoke script that exercises the public API journey as features arrive.
 - [x] Document local setup, migrations, tests, and common troubleshooting.
 
@@ -102,7 +104,7 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 
 # Milestone 1 — Authentication
 
-**Status:** Password-based auth and an initial PostgreSQL-backed journey test are implemented. Rate limiting and the remaining proof items are still pending.
+**Status:** Password-based auth and the register/login/protected-route/refresh/logout journey are implemented. Rate limiting and several negative/concurrency proof cases remain pending.
 
 **Design baseline:** email/password authentication; Argon2id password hashes; short-lived signed JWT access tokens; high-entropy opaque refresh tokens stored only as hashes; refresh-token rotation; server-side revocation. OAuth/OIDC is a later extension, not part of the first login implementation.
 
@@ -131,8 +133,10 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 
 ### 1C. Prove it
 
-- [x] Unit tests for password hashing, token claims/validation, and service behavior.
-- [x] Integration tests for registration, duplicate identity, login, wrong password, expired access token, refresh rotation, logout, and revoked token.
+- [x] Unit tests for token round-trip/tampering, refresh-token fingerprinting, and weak-secret rejection.
+- [ ] Add unit tests for password hashing and auth service behavior.
+- [x] PostgreSQL integration test for registration, login, authenticated user, refresh rotation, logout, and revoked refresh rejection.
+- [ ] Add integration tests for duplicate identity, wrong password, and expired access tokens.
 - [ ] Concurrency test: two refresh attempts using the same token cannot both succeed.
 - [ ] Reuse test: a consumed refresh token triggers the documented family policy.
 - [ ] Verify secrets, passwords, access tokens, and refresh tokens never appear in logs.
@@ -176,7 +180,7 @@ Authenticated users can manage their own profile and posts; other users cannot m
 
 # Milestone 3 — Social graph and chronological feed
 
-**Status:** The follow graph is implemented on `main`. Follow concurrency tests are in open PR #4, and the first PostgreSQL home-feed implementation is in open PR #5. Both latest CI runs passed; neither PR is merged yet.
+**Status:** The follow graph, concurrency coverage, and first PostgreSQL home feed are implemented on `main` (PRs #4 and #5 are merged). Feed edge-case coverage and performance measurement remain open.
 
 ### Follow graph — implemented
 
@@ -185,11 +189,11 @@ Authenticated users can manage their own profile and posts; other users cannot m
 - [x] Model public-account follows and private-account pending requests, including accept/reject behavior.
 - [x] Add follower/following lists with cursor pagination and relationship counts.
 - [x] Integrate block checks into relationship operations.
-- [x] Add concurrency tests for duplicate follow attempts, simultaneous acceptance, and competing accept/reject transitions (PR #4; pending merge).
+- [x] Add concurrency tests for duplicate follow attempts, simultaneous acceptance, and competing accept/reject transitions (merged in PR #4).
 - [ ] Define and test race behavior when a block is created while a follow operation is in progress.
 - [ ] Extend tests for deleted/suspended accounts and relationship state transitions.
 
-### Baseline feed — implementation in PR #5; review and hardening remain
+### Baseline feed — implemented; hardening and measurement remain
 
 - [x] Implement a PostgreSQL chronological feed containing the viewer's own posts and posts from accounts they follow with accepted relationships.
 - [x] Apply SQL visibility filters for private posts, blocks in both directions, deleted posts, and inactive/deleted authors.
@@ -197,8 +201,8 @@ Authenticated users can manage their own profile and posts; other users cannot m
 - [x] Apply eligibility/visibility filters in SQL before ordering and limiting the page.
 - [x] Use keyset pagination ordered by `(created_at, id)` with a stable `(created_at, id)` cursor predicate.
 - [x] Batch-hydrate post images separately to avoid N+1 queries and row multiplication.
-- [x] Add initial integration tests for private-account follow visibility, feed pagination, and invalid cursors.
-- [ ] Review and merge PR #5; extend tests for equal timestamps, empty feeds, block behavior, deleted/suspended authors, and new posts arriving between page requests.
+- [x] Add initial integration tests for visibility, feed pagination, and invalid cursors (merged in PR #5).
+- [ ] Extend tests for equal timestamps, empty feeds, block behavior, deleted/suspended authors, and new posts arriving between page requests.
 - [ ] Add indexes only after inspecting representative query plans; record `EXPLAIN (ANALYZE, BUFFERS)` for realistic seeded data.
 
 ### Exit criteria
@@ -240,7 +244,8 @@ This milestone is a gate before introducing more distributed components.
 - [ ] Add timeouts for database, Redis, and object-storage calls.
 - [ ] Add CI integration tests against real PostgreSQL and Redis services.
 - [ ] Add migration tests and verify clean install/upgrade paths.
-- [ ] Seed realistic distributions (including skewed follower counts); record seed assumptions.
+- [x] Add a deterministic, additive local demo seed with documented accounts and dataset assumptions; verify it reruns without duplicate rows.
+- [ ] Create a performance-scale dataset with skewed follower counts; record assumptions for benchmarking.
 - [ ] Add load tests for login, post creation, profile, and feed read paths.
 - [ ] Save benchmark commands, environment, dataset size, and p50/p95/p99 results.
 - [ ] Fix measured slow queries and N+1 behavior before adding caches.
@@ -370,7 +375,7 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 - [ ] Module boundaries are explicit; no cross-module ORM-row imports.
 - [x] Database constraints protect invariants that must survive concurrent requests.
 - [x] Mutating operations have documented transaction boundaries.
-- [ ] Pagination is bounded and uses a stable cursor where collections can grow.
+- [x] Pagination is bounded and uses a stable cursor for growing feed, post, and follow collections.
 - [ ] Authorization is enforced on every resource operation; do not trust client-supplied owner IDs.
 - [ ] Background work is idempotent, observable, retryable, and bounded.
 - [ ] Secrets and credentials never enter logs, traces, fixtures, or committed config.
@@ -386,20 +391,19 @@ Do not introduce Cassandra, Kubernetes, microservices, a service mesh, or multi-
 - [ ] Benchmarks include setup, dataset, command, and before/after results.
 - [ ] Failure drills include symptom, trigger, impact, recovery, and follow-up action.
 
-## Immediate next task: review and merge the two open PRs
+## Immediate next work: close correctness and measurement gaps
 
-The next implementation slices are now submitted as PR #4 and PR #5. Both latest CI runs passed, but the branches are not merged into `main`.
+The follow graph, chronological PostgreSQL feed, local demo seed, and connected web client are implemented. The next work is validation and hardening, not review of the already-merged PRs:
 
-1. Review PR #4's concurrency tests. Confirm they preserve the existing follow integration coverage and exercise the real PostgreSQL race paths—not only sequential duplicate requests.
-2. Review PR #5's feed SQL and API contract. Verify that the actual schema column names and domain mapping match the repository, and challenge the private-account, block, inactive-author, and deleted-post rules.
-3. Expand feed tests for block filtering, empty feeds, equal timestamps, deleted/suspended authors, and pagination while new posts arrive.
-4. Merge PR #4 and PR #5 only after review and green CI; update this roadmap again after the merge.
-5. Capture representative `EXPLAIN (ANALYZE, BUFFERS)` plans and feed latency on realistically seeded PostgreSQL data.
-6. Keep auth refresh-token concurrency/reuse and secret-handling gaps visible as parallel hardening work.
+1. Add auth tests for duplicate registration, wrong passwords, expired access tokens, concurrent refresh attempts, and consumed-token reuse.
+2. Expand feed tests for equal timestamps, empty feeds, block changes, inactive authors, and page boundaries while new posts arrive.
+3. Define and test race semantics between follow operations and block creation/removal.
+4. Verify Alembic upgrade/downgrade on a clean database and add bounded timeouts to readiness checks.
+5. Capture representative `EXPLAIN (ANALYZE, BUFFERS)` plans and feed latency using a performance-scale dataset.
 
-Do not add Redis timelines, Kafka/Redpanda, fan-out workers, or ranking yet. First establish that the PostgreSQL feed is correct, understandable, and measurable.
+Do not add Redis timelines, Kafka/Redpanda consumers, fan-out workers, or ranking until the PostgreSQL feed has stronger edge-case coverage and a reproducible performance baseline. Media lifecycle work can proceed as a separate milestone once its upload and processing contract is defined.
 
-**Definition of done:** both PRs reviewed and merged, expanded PostgreSQL integration coverage green, and an initial query-plan/performance baseline recorded.
+**Definition of done for feed scaling:** expanded PostgreSQL feed coverage is green and a reproducible query-plan/performance baseline is recorded.
 
 ## Weekly / milestone log template
 

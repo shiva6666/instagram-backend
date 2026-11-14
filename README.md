@@ -163,12 +163,12 @@ Use these local-only credentials in the frontend:
 
 | Email | Password |
 |---|---|
-| `demo_alice@example.test` | `DemoPassword123!` |
-| `demo_bob@example.test` | `DemoPassword123!` |
-| `demo_charlie@example.test` | `DemoPassword123!` |
-| `demo_david@example.test` | `DemoPassword123!` |
+| `demo_alice@example.com` | `DemoPassword123!` |
+| `demo_bob@example.com` | `DemoPassword123!` |
+| `demo_charlie@example.com` | `DemoPassword123!` |
+| `demo_david@example.com` | `DemoPassword123!` |
 
-The remaining generated users use the same password and have emails in the form `demo_user_05@example.test`.
+The remaining generated users use the same password and have emails in the form `demo_user_05@example.com`.
 
 The seed is deterministic and additive: rerunning it does not duplicate seeded records or delete existing data. It does not populate Redis, MinIO, or Redpanda; those systems should be populated through the application workflows that use them.
 

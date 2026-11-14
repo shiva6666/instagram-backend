@@ -99,7 +99,7 @@ def build_users(
             {
                 "id": user_id,
                 "username": username,
-                "email": f"{username}@example.test",
+                "email": f"{username}@example.com",
                 "bio": (
                     f"{display_name} | "
                     f"{fake.sentence(nb_words=7).rstrip('.')}."
@@ -172,6 +172,8 @@ def build_follows(
     count: int,
     now: datetime,
 ) -> list[tuple[object, ...]]:
+    max_edges = len(user_ids) * (len(user_ids) - 1)
+    target = min(count, max_edges)
     private_user_ids = {
         user["id"] for user in users if user["is_private"] is True
     }
@@ -193,8 +195,6 @@ def build_follows(
         status = "pending" if following_id in private_user_ids else "accepted"
         edges[(follower_id, following_id)] = status
 
-    max_edges = len(user_ids) * (len(user_ids) - 1)
-    target = min(count, max_edges)
     while len(edges) < target:
         follower_id, following_id = rng.sample(user_ids, 2)
         status = "pending" if following_id in private_user_ids else "accepted"
@@ -361,7 +361,7 @@ async def seed(args: argparse.Namespace) -> None:
         f"post_images={counts['post_images']}, "
         f"follows={counts['follows']}"
     )
-    print("Demo login: demo_alice@example.test")
+    print("Demo login: demo_alice@example.com")
     print(f"Demo password: {DEMO_PASSWORD}")
     print("Other demo accounts: demo_bob, demo_charlie, demo_david")
 
