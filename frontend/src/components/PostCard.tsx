@@ -27,11 +27,7 @@ export function PostCard({
     <article className="post-card">
       <header className="post-header">
         <a className="avatar avatar-sm" href={`/profile/${post.username}`}>
-          {post.user_avatar ? (
-            <img src={post.user_avatar} alt="" />
-          ) : (
-            post.username.slice(0, 1).toUpperCase()
-          )}
+          {post.username.slice(0, 1).toUpperCase()}
         </a>
         <div className="post-author">
           <a href={`/profile/${post.username}`} className="username">
