@@ -7,9 +7,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-def _register(
-    client: TestClient, *, private: bool = False
-) -> tuple[str, str]:
+def _register(client: TestClient, *, private: bool = False) -> tuple[str, str]:
     username = f"feed_{secrets.token_hex(5)}"
     response = client.post(
         "/api/v1/auth/register",
