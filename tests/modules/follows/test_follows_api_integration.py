@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 
 from fastapi.testclient import TestClient
 
@@ -26,6 +29,21 @@ def _register(client: TestClient, *, private: bool = False) -> tuple[str, str]:
 
 def _auth(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _run_concurrently(
+    operations: list[Callable[[], object]],
+) -> list[object]:
+    """Start independent HTTP requests together to exercise database races."""
+    barrier = Barrier(len(operations))
+
+    def run(operation: Callable[[], object]) -> object:
+        barrier.wait(timeout=10)
+        return operation()
+
+    with ThreadPoolExecutor(max_workers=len(operations)) as executor:
+        futures = [executor.submit(run, operation) for operation in operations]
+        return [future.result(timeout=30) for future in futures]
 
 
 def test_private_follow_request_acceptance_and_unfollow_use_postgresql() -> None:
@@ -149,3 +167,106 @@ def test_follower_list_uses_cursor_without_duplicates() -> None:
         second_ids = {item["id"] for item in second_payload["users"]}
         assert first_ids.isdisjoint(second_ids)
         assert len(first_ids | second_ids) == 3
+
+
+def test_concurrent_duplicate_follows_create_one_relationship() -> None:
+    with TestClient(app) as client:
+        target, _ = _register(client)
+        _follower, follower_token = _register(client)
+
+        responses = _run_concurrently(
+            [
+                lambda: client.post(
+                    f"/api/v1/follows/{target}", headers=_auth(follower_token)
+                ),
+                lambda: client.post(
+                    f"/api/v1/follows/{target}", headers=_auth(follower_token)
+                ),
+            ]
+        )
+
+        assert [response.status_code for response in responses] == [200, 200]
+        assert responses[0].json()["created_at"] == responses[1].json()["created_at"]
+
+        counts = client.get(
+            f"/api/v1/follows/{target}/counts",
+            headers=_auth(follower_token),
+        )
+        assert counts.status_code == 200
+        assert counts.json()["followers"] == 1
+
+        relationship = client.get(
+            f"/api/v1/follows/{target}/relationship",
+            headers=_auth(follower_token),
+        )
+        assert relationship.status_code == 200
+        assert relationship.json()["status"] == "accepted"
+
+
+def test_concurrent_accept_requests_are_idempotent() -> None:
+    with TestClient(app) as client:
+        private_user, private_token = _register(client, private=True)
+        follower, follower_token = _register(client)
+
+        requested = client.post(
+            f"/api/v1/follows/{private_user}", headers=_auth(follower_token)
+        )
+        assert requested.status_code == 200
+        assert requested.json()["status"] == "pending"
+
+        responses = _run_concurrently(
+            [
+                lambda: client.post(
+                    f"/api/v1/follows/requests/{follower}/accept",
+                    headers=_auth(private_token),
+                ),
+                lambda: client.post(
+                    f"/api/v1/follows/requests/{follower}/accept",
+                    headers=_auth(private_token),
+                ),
+            ]
+        )
+
+        assert [response.status_code for response in responses] == [200, 200]
+        assert all(response.json()["status"] == "accepted" for response in responses)
+
+        relationship = client.get(
+            f"/api/v1/follows/{private_user}/relationship",
+            headers=_auth(follower_token),
+        )
+        assert relationship.status_code == 200
+        assert relationship.json()["status"] == "accepted"
+
+
+def test_concurrent_accept_and_reject_allow_only_one_transition() -> None:
+    with TestClient(app) as client:
+        private_user, private_token = _register(client, private=True)
+        follower, follower_token = _register(client)
+
+        requested = client.post(
+            f"/api/v1/follows/{private_user}", headers=_auth(follower_token)
+        )
+        assert requested.status_code == 200
+        assert requested.json()["status"] == "pending"
+
+        responses = _run_concurrently(
+            [
+                lambda: client.post(
+                    f"/api/v1/follows/requests/{follower}/accept",
+                    headers=_auth(private_token),
+                ),
+                lambda: client.delete(
+                    f"/api/v1/follows/requests/{follower}",
+                    headers=_auth(private_token),
+                ),
+            ]
+        )
+
+        assert sorted(response.status_code for response in responses) == [204, 404]
+
+        relationship = client.get(
+            f"/api/v1/follows/{private_user}/relationship",
+            headers=_auth(follower_token),
+        )
+        assert relationship.status_code == 200
+        assert relationship.json()["status"] in {None, "accepted"}
