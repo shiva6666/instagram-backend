@@ -48,9 +48,18 @@ def upgrade() -> None:
             "status IN ('pending', 'processing', 'ready', 'failed')",
             name="media_status_check",
         ),
-        sa.CheckConstraint("size_bytes IS NULL OR size_bytes >= 0", name="media_size_nonnegative"),
-        sa.CheckConstraint("width IS NULL OR width > 0", name="media_width_positive"),
-        sa.CheckConstraint("height IS NULL OR height > 0", name="media_height_positive"),
+        sa.CheckConstraint(
+            "size_bytes IS NULL OR size_bytes >= 0",
+            name="media_size_nonnegative",
+        ),
+        sa.CheckConstraint(
+            "width IS NULL OR width > 0",
+            name="media_width_positive",
+        ),
+        sa.CheckConstraint(
+            "height IS NULL OR height > 0",
+            name="media_height_positive",
+        ),
     )
     op.create_index("ix_media_owner_created", "media", ["owner_id", "created_at"])
     op.create_index("ix_media_status_created", "media", ["status", "created_at"])
