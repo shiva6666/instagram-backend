@@ -28,4 +28,4 @@ migrate:
 	uv run alembic upgrade head
 
 seed:
-	uv run python scripts/seed.py
+	uv run --extra dev python scripts/seed.py
