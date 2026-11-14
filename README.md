@@ -21,7 +21,6 @@ The following image is the project's high-level system-design blueprint. It capt
 
 ![Instagram System Design — target architecture](docs/assets/project-image.png)
 
-
 The reference system design is intentionally broader than the first implementation. It is split into independently understandable areas:
 
 | Area | Responsibility | Example technologies |
@@ -111,53 +110,44 @@ The local Docker Compose stack includes the API and supporting infrastructure su
 
 - Python 3.15+
 - [uv](https://docs.astral.sh/uv/)
-- Docker Compose
+- Node.js 20.19+ or 22.12+
+- npm
+- Docker Compose v2
 
-## Setup
+## One-time setup
 
 ```bash
 cp .env.example .env
-uv sync --extra dev
-pre-commit install
 ```
 
-The values in `.env.example` are for local development only. Do not use them outside your machine.
-
-## Run the API and infrastructure
+Generate a local JWT secret and replace the placeholder in `.env`:
 
 ```bash
-make up
+openssl rand -hex 32
 ```
 
-API docs are at <http://127.0.0.1:8000/docs>.
+Paste the generated value into `AUTH_JWT_SECRET`. The other values in `.env.example` are local-development defaults; do not use them outside your machine.
 
-Useful local endpoints:
+## Start backend and frontend together
 
-- Liveness: <http://127.0.0.1:8000/api/v1/health>
-- Dependency readiness: <http://127.0.0.1:8000/api/v1/ready>
-- MinIO console: <http://127.0.0.1:9001>
-- pgAdmin: <http://127.0.0.1:5050>
-- Prometheus: <http://127.0.0.1:9090>
-- Grafana: <http://127.0.0.1:3000>
-
-To run the API outside Docker with hot reload:
+From the repository root, run:
 
 ```bash
-uv run uvicorn app.main:app --reload
+make dev
 ```
 
-In another terminal, start PostgreSQL and Redis with:
+This command:
+1. Starts PostgreSQL and Redis with Docker Compose and waits for their health checks.
+2. Syncs the Python development dependencies.
+3. Applies pending Alembic migrations.
+4. Installs frontend dependencies from `package-lock.json` if needed.
+5. Starts FastAPI with reload and the Vite development server.
 
-```bash
-docker compose up -d postgres redis
-```
+Open the frontend at <http://127.0.0.1:5173>. The backend API and interactive docs are at <http://127.0.0.1:8000> and <http://127.0.0.1:8000/docs>.
 
-After the API is running and migrations have been applied, exercise the public
-authentication journey with:
+Press `Ctrl+C` to stop both development servers. PostgreSQL and Redis remain running; stop them with `docker compose down`.
 
-```bash
-uv run python scripts/smoke_auth.py
-```
+The frontend's Vite proxy forwards `/api` requests to FastAPI, so local development does not require permissive CORS configuration.
 
 ## Authentication (first implementation)
 
@@ -170,8 +160,6 @@ The password-based auth slice exposes these routes under `/api/v1`:
 | POST | `/auth/refresh` | Rotate an opaque refresh token |
 | POST | `/auth/logout` | Revoke the refresh-token family |
 | GET | `/auth/me` | Return the authenticated user's profile |
-
-Set `AUTH_JWT_SECRET` in your local `.env` to a cryptographically random value of at least 32 bytes (for example, generate one with `openssl rand -hex 32`). Never commit the real secret. Apply the new schema with `make migrate`.
 
 Access tokens are short-lived JWTs. Refresh tokens are opaque values; the database stores only their SHA-256 fingerprints. The API currently returns both tokens in JSON, so native clients should keep refresh tokens in Keychain/Keystore. A browser client needs an HttpOnly/Secure/SameSite cookie transport and CSRF protections before production use. See [the authentication implementation notes](docs/learnings/auth-module-implementation.md) for the flow and known hardening gaps.
 
