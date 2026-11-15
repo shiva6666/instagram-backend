@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from app.modules.media.models import Media, MediaStatus
 from app.modules.posts.models import (
     Post,
     PostImage,
@@ -16,6 +17,9 @@ from app.modules.posts.models import (
 )
 from app.modules.posts.service import (
     PostForbiddenError,
+    PostMediaAlreadyAttachedError,
+    PostMediaForbiddenError,
+    PostMediaNotReadyError,
     PostNotFoundError,
     PostService,
     UserUnavailableError,
@@ -346,3 +350,118 @@ def test_private_posts_are_filtered_before_page_limit() -> None:
 
     assert len(posts) == 2
     assert all(not post.is_private for post in posts)
+
+
+class FakeMediaRepository:
+    def __init__(self, media: list[Media]) -> None:
+        self.items = {item.id: item for item in media}
+        self.attached: set[UUID] = set()
+
+    async def get_by_ids_for_update(self, media_ids: list[UUID]) -> list[Media]:
+        return [self.items[item] for item in media_ids if item in self.items]
+
+    async def get_attached_ids(self, media_ids: list[UUID]) -> set[UUID]:
+        return self.attached.intersection(media_ids)
+
+
+def make_media(owner_id: UUID, *, status: str = MediaStatus.READY) -> Media:
+    now = datetime.now(UTC)
+    return Media(
+        id=uuid4(),
+        owner_id=owner_id,
+        object_key="original/test/source",
+        url=None,
+        content_type="image/png",
+        size_bytes=100,
+        status=status,
+        width=640,
+        height=480,
+        created_at=now,
+        updated_at=now,
+        expected_size_bytes=100,
+        display_object_key="processed/test/display.webp",
+        thumbnail_object_key="processed/test/thumbnail.webp",
+    )
+
+
+def test_create_post_attaches_only_owned_ready_unattached_media() -> None:
+    alice = make_user()
+    media = make_media(alice.id)
+    media_repository = FakeMediaRepository([media])
+    service = PostService(
+        FakePostRepository(),
+        FakeUserRepository([alice]),
+        media_repository,
+    )
+
+    post, author = run(
+        service.create_post(
+            actor=alice,
+            caption="uploaded image",
+            media_ids=[media.id],
+        )
+    )
+
+    assert author.id == alice.id
+    assert post.images[0].media_id == media.id
+    assert post.images[0].url is None
+
+
+def test_create_post_rejects_media_owned_by_another_user() -> None:
+    alice = make_user()
+    bob = make_user(username="bob")
+    media = make_media(bob.id)
+    service = PostService(
+        FakePostRepository(),
+        FakeUserRepository([alice, bob]),
+        FakeMediaRepository([media]),
+    )
+
+    with pytest.raises(PostMediaForbiddenError):
+        run(
+            service.create_post(
+                actor=alice,
+                caption=None,
+                media_ids=[media.id],
+            )
+        )
+
+
+def test_create_post_rejects_media_that_is_not_ready() -> None:
+    alice = make_user()
+    media = make_media(alice.id, status=MediaStatus.PROCESSING)
+    service = PostService(
+        FakePostRepository(),
+        FakeUserRepository([alice]),
+        FakeMediaRepository([media]),
+    )
+
+    with pytest.raises(PostMediaNotReadyError):
+        run(
+            service.create_post(
+                actor=alice,
+                caption=None,
+                media_ids=[media.id],
+            )
+        )
+
+
+def test_create_post_rejects_media_already_attached() -> None:
+    alice = make_user()
+    media = make_media(alice.id)
+    media_repository = FakeMediaRepository([media])
+    media_repository.attached.add(media.id)
+    service = PostService(
+        FakePostRepository(),
+        FakeUserRepository([alice]),
+        media_repository,
+    )
+
+    with pytest.raises(PostMediaAlreadyAttachedError):
+        run(
+            service.create_post(
+                actor=alice,
+                caption=None,
+                media_ids=[media.id],
+            )
+        )

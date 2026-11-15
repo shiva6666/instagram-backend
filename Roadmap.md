@@ -35,7 +35,7 @@ This status reflects the implemented modules, tests, and local workflows current
 | Home feed | Implemented on `main`: PostgreSQL chronological feed with visibility filtering, cursor pagination, and batched image hydration | Expand edge-case coverage and record a query-plan/performance baseline |
 | Web frontend | React/Vite client integrated with `/api/v1` through the development proxy; auth, feed, profiles, follows, and URL-based posts are implemented | Add UI-level tests; likes, comments, direct uploads, and profile editing await backend APIs |
 | Local development and demo data | `make dev` starts the local stack; `make seed` creates 30 users, 180 posts, image metadata, 150 follows, and block relationships. Reruns and demo login were verified locally | Keep seed assumptions aligned with future performance datasets |
-| Media upload/processing, durable event consumers, ranking | Not implemented | Defer until the core media lifecycle and feed requirements are defined |
+| Media upload/processing | Upload API, private MinIO storage, validation, variants, signed delivery, and cleanup implemented in the current media PR; worker-based async processing and full MinIO E2E proof remain | Add MinIO-backed E2E coverage, then move processing to a durable worker when justified |
 
 ### Recently merged implementation slices
 
@@ -215,16 +215,18 @@ A user can follow accounts and retrieve a correct, private-aware, cursor-paginat
 
 Start with images. Add video only after the image path is reliable.
 
-- [ ] Add a media module and media metadata table linked to owner and post.
-- [ ] Generate short-lived presigned upload URLs; clients upload bytes directly to S3-compatible object storage (MinIO locally).
-- [ ] Implement upload completion/finalization and verify the object exists.
-- [ ] Validate size, allowed content types, and file signatures; never trust the filename or extension.
-- [ ] Process images into bounded variants and thumbnails; strip sensitive EXIF metadata where appropriate.
-- [ ] Track explicit states such as pending, processing, ready, and failed.
-- [ ] Make processing retryable and idempotent; use immutable/versioned object keys.
-- [ ] Ensure posts with media are not visible as ready until required processing succeeds.
-- [ ] Define cleanup for abandoned uploads and deleted media.
-- [ ] Add end-to-end tests for successful upload, invalid content, expired URL, retry, and worker failure.
+- [x] Add a media module and media metadata table linked to owner and post.
+- [x] Generate short-lived presigned upload URLs; clients upload bytes directly to S3-compatible object storage (MinIO locally).
+- [x] Implement upload completion/finalization and verify the object exists.
+- [x] Validate size, allowed content types, and file signatures; never trust the filename or extension.
+- [x] Process images into bounded variants and thumbnails; strip sensitive EXIF metadata from served variants.
+- [x] Track explicit states such as pending, processing, ready, failed, and deleting.
+- [x] Make completion retryable and idempotent; use deterministic object keys for generated variants.
+- [x] Ensure posts with media are not visible as ready until required processing succeeds.
+- [x] Define cleanup for abandoned uploads and discarded media; cleanup is a retryable one-shot job.
+- [ ] Add MinIO-backed end-to-end tests for successful upload, invalid content, expired URL, retry, and storage/processing failure.
+
+Image processing currently runs synchronously during upload completion. Move it to a durable worker/outbox flow after the core media path has MinIO-backed end-to-end coverage.
 
 ### Exit criteria
 

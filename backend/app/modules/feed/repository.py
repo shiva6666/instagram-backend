@@ -113,8 +113,8 @@ class SqlAlchemyFeedRepository:
         post_ids = [row["post_id"] for row in rows]
         image_statement = text(
             """
-            SELECT post_id, position, url
-            FROM post_images
+            SELECT post_id, position, media_id, url
+            FROM post_media
             WHERE post_id IN :post_ids
             ORDER BY post_id, position
             """
@@ -130,7 +130,11 @@ class SqlAlchemyFeedRepository:
         }
         for image_row in image_rows:
             images_by_post[image_row["post_id"]].append(
-                PostImage(position=image_row["position"], url=image_row["url"])
+                PostImage(
+                    position=image_row["position"],
+                    url=image_row["url"],
+                    media_id=image_row["media_id"],
+                )
             )
 
         return [

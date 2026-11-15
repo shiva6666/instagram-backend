@@ -6,6 +6,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.modules.auth.dependencies import DatabaseSession, get_current_user
+from app.modules.media.dependencies import get_media_url_resolver
+from app.modules.media.repository import SqlAlchemyMediaRepository
+from app.modules.media.service import MediaUrlResolver
 from app.modules.posts.models import Post
 from app.modules.posts.repository import SqlAlchemyPostRepository
 from app.modules.posts.schemas import (
@@ -17,6 +20,10 @@ from app.modules.posts.schemas import (
 from app.modules.posts.service import (
     InvalidPostCursorError,
     PostForbiddenError,
+    PostMediaAlreadyAttachedError,
+    PostMediaForbiddenError,
+    PostMediaNotFoundError,
+    PostMediaNotReadyError,
     PostNotFoundError,
     PostService,
     UserUnavailableError,
@@ -27,16 +34,18 @@ from app.modules.users.repository import SqlAlchemyUserRepository
 router = APIRouter(prefix="/posts", tags=["posts"])
 
 
-def get_post_service(
-    session: DatabaseSession,
-) -> PostService:
+def get_post_service(session: DatabaseSession) -> PostService:
     return PostService(
         SqlAlchemyPostRepository(session),
         SqlAlchemyUserRepository(session),
+        SqlAlchemyMediaRepository(session),
     )
 
 
-def _response(post: Post, author: User) -> PostResponse:
+async def _response(
+    post: Post, author: User, media_urls: MediaUrlResolver
+) -> PostResponse:
+    images = await media_urls.resolve(post.images)
     return PostResponse(
         id=post.id,
         user_id=post.user_id,
@@ -45,7 +54,7 @@ def _response(post: Post, author: User) -> PostResponse:
         caption=post.caption,
         post_img_url=[
             PostImageResponse(position=image.position, url=image.url)
-            for image in post.images
+            for image in images
         ],
         created_at=post.created_at,
         is_private=post.is_private,
@@ -63,19 +72,31 @@ async def create_post(
     payload: PostCreateRequest,
     actor: Annotated[User, Depends(get_current_user)],
     service: Annotated[PostService, Depends(get_post_service)],
+    media_urls: Annotated[MediaUrlResolver, Depends(get_media_url_resolver)],
 ) -> PostResponse:
     try:
         post, author = await service.create_post(
             actor=actor,
             caption=payload.caption,
-            image_urls=[image.url for image in payload.post_img_url],
+            image_urls=(
+                [image.url for image in payload.post_img_url]
+                if payload.post_img_url is not None
+                else None
+            ),
+            media_ids=payload.media_ids,
             is_private=payload.is_private,
         )
     except UserUnavailableError as error:
         raise HTTPException(status_code=403, detail=str(error)) from error
+    except PostMediaNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except PostMediaForbiddenError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except (PostMediaNotReadyError, PostMediaAlreadyAttachedError) as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return _response(post, author)
+    return await _response(post, author, media_urls)
 
 
 @router.get(
@@ -87,12 +108,13 @@ async def get_post(
     post_id: UUID,
     viewer: Annotated[User, Depends(get_current_user)],
     service: Annotated[PostService, Depends(get_post_service)],
+    media_urls: Annotated[MediaUrlResolver, Depends(get_media_url_resolver)],
 ) -> PostResponse:
     try:
         post, author = await service.get_post(post_id=post_id, viewer=viewer)
     except PostNotFoundError as error:
         raise HTTPException(status_code=404, detail="Post was not found") from error
-    return _response(post, author)
+    return await _response(post, author, media_urls)
 
 
 @router.get(
@@ -104,11 +126,12 @@ async def list_posts_by_author(
     username: str,
     viewer: Annotated[User, Depends(get_current_user)],
     service: Annotated[PostService, Depends(get_post_service)],
+    media_urls: Annotated[MediaUrlResolver, Depends(get_media_url_resolver)],
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     cursor: str | None = None,
 ) -> PostListResponse:
     try:
-        posts, _author, next_cursor = await service.list_posts_by_author(
+        posts, author, next_cursor = await service.list_posts_by_author(
             username=username,
             viewer=viewer,
             cursor=cursor,
@@ -118,11 +141,10 @@ async def list_posts_by_author(
         raise HTTPException(status_code=404, detail="Author was not found") from error
     except InvalidPostCursorError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return PostListResponse(
-        posts=[_response(post, _author) for post in posts],
-        limit=limit,
-        next_cursor=next_cursor,
-    )
+    responses = [
+        await _response(post, author, media_urls) for post in posts
+    ]
+    return PostListResponse(posts=responses, limit=limit, next_cursor=next_cursor)
 
 
 @router.delete(

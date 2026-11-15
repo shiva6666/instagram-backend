@@ -47,8 +47,15 @@ fi
 
 rm -f "$BACKEND_PID_FILE" "$FRONTEND_PID_FILE"
 
-echo "==> Starting PostgreSQL and Redis..."
-docker compose -f "$REPO_ROOT/docker-compose.yml" --env-file "$REPO_ROOT/.env" up --detach --wait postgres redis
+for command in identify convert; do
+  if ! command -v "$command" >/dev/null 2>&1; then
+    echo "Error: '$command' is required for media image validation. Install ImageMagick." >&2
+    exit 1
+  fi
+done
+
+echo "==> Starting PostgreSQL, Redis, and MinIO..."
+docker compose -f "$REPO_ROOT/docker-compose.yml" --env-file "$REPO_ROOT/.env" up --detach --wait postgres redis minio
 
 echo "==> Syncing Python dependencies..."
 uv sync --extra dev

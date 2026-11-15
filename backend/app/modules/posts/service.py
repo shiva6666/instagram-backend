@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from app.core.ids import new_uuid7
+from app.modules.media.models import MediaStatus
+from app.modules.media.repository import MediaRepository
 from app.modules.posts.models import Post, PostImage, PostLifecycle, PostVisibility
 from app.modules.posts.repository import PostRepository
 from app.modules.users.models import User, UserStatus
@@ -26,6 +28,22 @@ class UserUnavailableError(PermissionError):
 
 class InvalidPostCursorError(ValueError):
     """Raised when an author-post cursor is malformed."""
+
+
+class PostMediaNotFoundError(LookupError):
+    """Raised when one or more selected media assets do not exist."""
+
+
+class PostMediaForbiddenError(PermissionError):
+    """Raised when a selected media asset belongs to another user."""
+
+
+class PostMediaNotReadyError(RuntimeError):
+    """Raised when selected media has not completed processing."""
+
+
+class PostMediaAlreadyAttachedError(RuntimeError):
+    """Raised when selected media is already attached to a post."""
 
 
 def _encode_post_cursor(post: Post) -> str:
@@ -62,9 +80,11 @@ class PostService:
         self,
         posts: PostRepository,
         users: UserRepository,
+        media: MediaRepository | None = None,
     ) -> None:
         self._posts = posts
         self._users = users
+        self._media = media
 
     async def _active_author(self, user_id: UUID) -> User:
         author = await self._users.get_by_id(user_id)
@@ -102,7 +122,8 @@ class PostService:
         *,
         actor: User,
         caption: str | None,
-        image_urls: list[str],
+        image_urls: list[str] | None = None,
+        media_ids: list[UUID] | None = None,
         is_private: bool = False,
     ) -> tuple[Post, User]:
         author = await self._users.get_by_id(actor.id)
@@ -110,21 +131,61 @@ class PostService:
             raise UserUnavailableError("account is not available")
         _ensure_active(author)
 
-        normalized_urls = [url.strip() for url in image_urls]
-        if not normalized_urls or len(normalized_urls) > 10:
-            raise ValueError("a post must contain between 1 and 10 images")
-        if any(not url for url in normalized_urls):
-            raise ValueError("image URLs must not be empty")
+        if (image_urls is None) == (media_ids is None):
+            raise ValueError("provide either image URLs or media IDs")
+
+        images: tuple[PostImage, ...]
+        if media_ids is not None:
+            if not 1 <= len(media_ids) <= 10:
+                raise ValueError("a post must contain between 1 and 10 images")
+            if len(set(media_ids)) != len(media_ids):
+                raise ValueError("a media asset may only appear once in a post")
+            if self._media is None:
+                raise RuntimeError("media repository is required for media-ID posts")
+
+            media_items = await self._media.get_by_ids_for_update(media_ids)
+            if len(media_items) != len(media_ids):
+                raise PostMediaNotFoundError("one or more media assets were not found")
+            media_by_id = {item.id: item for item in media_items}
+            ordered_media = [media_by_id[media_id] for media_id in media_ids]
+
+            if any(item.owner_id != author.id for item in ordered_media):
+                raise PostMediaForbiddenError("you may only attach your own media")
+            if any(
+                item.status != MediaStatus.READY
+                or item.cleanup_requested_at is not None
+                or (item.url is None and item.display_object_key is None)
+                for item in ordered_media
+            ):
+                raise PostMediaNotReadyError(
+                    "all media must be ready and not scheduled for cleanup"
+                )
+            attached_ids = await self._media.get_attached_ids(media_ids)
+            if attached_ids:
+                raise PostMediaAlreadyAttachedError(
+                    "one or more media assets are already attached to a post"
+                )
+            images = tuple(
+                PostImage(position=index, url=item.url, media_id=item.id)
+                for index, item in enumerate(ordered_media)
+            )
+        else:
+            normalized_urls = [url.strip() for url in image_urls or []]
+            if not normalized_urls or len(normalized_urls) > 10:
+                raise ValueError("a post must contain between 1 and 10 images")
+            if any(not url for url in normalized_urls):
+                raise ValueError("image URLs must not be empty")
+            images = tuple(
+                PostImage(position=index, url=url)
+                for index, url in enumerate(normalized_urls)
+            )
 
         now = datetime.now(UTC)
         post = Post(
             id=new_uuid7(),
             user_id=author.id,
             caption=caption.strip() if caption and caption.strip() else None,
-            images=tuple(
-                PostImage(position=index, url=url)
-                for index, url in enumerate(normalized_urls)
-            ),
+            images=images,
             is_private=is_private,
             created_at=now,
             updated_at=now,
