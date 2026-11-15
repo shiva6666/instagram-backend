@@ -100,10 +100,7 @@ def build_users(
                 "id": user_id,
                 "username": username,
                 "email": f"{username}@example.com",
-                "bio": (
-                    f"{display_name} | "
-                    f"{fake.sentence(nb_words=7).rstrip('.')}."
-                ),
+                "bio": (f"{display_name} | {fake.sentence(nb_words=7).rstrip('.')}."),
                 "avatar_key": None,
                 "is_private": is_private,
                 "status": "active",
@@ -174,9 +171,7 @@ def build_follows(
 ) -> list[tuple[object, ...]]:
     max_edges = len(user_ids) * (len(user_ids) - 1)
     target = min(count, max_edges)
-    private_user_ids = {
-        user["id"] for user in users if user["is_private"] is True
-    }
+    private_user_ids = {user["id"] for user in users if user["is_private"] is True}
     edges: dict[tuple[UUID, UUID], str] = {}
 
     # Explicit relationships make the private-account flows easy to explore.
@@ -218,9 +213,7 @@ async def seed(args: argparse.Namespace) -> None:
     now = datetime.now(UTC)
 
     users, user_ids = build_users(args.users, rng, fake, now)
-    posts, images, post_ids = build_posts(
-        users, rng, fake, now, args.posts
-    )
+    posts, images, post_ids = build_posts(users, rng, fake, now, args.posts)
     follows = build_follows(users, user_ids, rng, args.follows, now)
 
     # Hash once: all local demo accounts intentionally share one password.
