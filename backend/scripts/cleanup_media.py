@@ -27,6 +27,10 @@ CLAIM_SQL = text(
                 SELECT 1 FROM post_media AS pm WHERE pm.media_id = m.id
             )
             AND (
+                m.upload_expires_at IS NULL
+                OR m.upload_expires_at <= :safe_before
+            )
+            AND (
                 m.status = 'deleting'
                 OR m.cleanup_requested_at <= :now
                 OR (
@@ -57,6 +61,7 @@ async def cleanup_media(batch_size: int = 100) -> int:
 
     now = datetime.now(UTC)
     expired_before = now - timedelta(hours=settings.media_cleanup_grace_hours)
+    safe_before = now - timedelta(minutes=5)
     async with session_factory() as session:
         # A soft-deleted post keeps its media during the grace period. Once
         # that period expires, detach its media so the normal cleanup claim
@@ -93,6 +98,7 @@ async def cleanup_media(batch_size: int = 100) -> int:
             {
                 "now": now,
                 "expired_before": expired_before,
+                "safe_before": safe_before,
                 "batch_size": batch_size,
             },
         )

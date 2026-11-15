@@ -130,19 +130,18 @@ class MediaService:
             raise MediaConflictError("media upload metadata is incomplete")
 
         now = datetime.now(UTC)
-        if media.upload_expires_at is not None and now > media.upload_expires_at:
-            failed = replace(
-                media,
-                status=MediaStatus.FAILED,
-                failure_reason="upload URL expired",
-                updated_at=now,
-                cleanup_requested_at=now,
-            )
-            return await self._repository.save(failed)
-
         try:
             stored = await self._storage.head_object(media.object_key)
         except ObjectNotFoundError as error:
+            if media.upload_expires_at is not None and now > media.upload_expires_at:
+                failed = replace(
+                    media,
+                    status=MediaStatus.FAILED,
+                    failure_reason="upload URL expired before an object was uploaded",
+                    updated_at=now,
+                    cleanup_requested_at=now,
+                )
+                return await self._repository.save(failed)
             raise MediaUploadMissingError(
                 "uploaded object was not found; upload it before completing"
             ) from error

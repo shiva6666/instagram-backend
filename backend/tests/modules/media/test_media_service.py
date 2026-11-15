@@ -307,3 +307,29 @@ def make_media_for_resolver(owner_id: UUID) -> Media:
         display_object_key="processed/test/display.webp",
         thumbnail_object_key="processed/test/thumbnail.webp",
     )
+
+
+def test_complete_upload_allows_finalization_after_upload_url_expiry() -> None:
+    service, repository, _storage = service_for()
+    owner_id = uuid4()
+    now = datetime.now(UTC)
+    media = Media(
+        id=uuid4(),
+        owner_id=owner_id,
+        object_key="original/test/source",
+        url=None,
+        content_type="image/png",
+        size_bytes=None,
+        status=MediaStatus.PENDING,
+        width=None,
+        height=None,
+        created_at=now - timedelta(hours=1),
+        updated_at=now - timedelta(hours=1),
+        expected_size_bytes=4,
+        upload_expires_at=now - timedelta(minutes=1),
+    )
+    repository.items[media.id] = media
+
+    completed = run(service.complete_upload(owner_id=owner_id, media_id=media.id))
+
+    assert completed.status == MediaStatus.READY
