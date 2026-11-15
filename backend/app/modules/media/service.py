@@ -111,13 +111,13 @@ class MediaService:
             raise MediaNotFoundError("media was not found")
         if media.owner_id != owner_id:
             raise MediaForbiddenError("media does not belong to this user")
-        if media.status == MediaStatus.READY:
-            return media
         if (
             media.status == MediaStatus.DELETING
             or media.cleanup_requested_at is not None
         ):
             raise MediaConflictError("media is scheduled for cleanup")
+        if media.status == MediaStatus.READY:
+            return media
         if media.status not in {MediaStatus.PENDING, MediaStatus.FAILED}:
             raise MediaConflictError("media cannot be completed in its current state")
         if media.object_key is None or media.expected_size_bytes is None:
