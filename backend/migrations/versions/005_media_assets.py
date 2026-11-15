@@ -114,6 +114,10 @@ def downgrade() -> None:
         """
         DO $$
         BEGIN
+            IF EXISTS (SELECT 1 FROM media WHERE object_key IS NOT NULL) THEN
+                RAISE EXCEPTION
+                    'cannot downgrade media migration while storage-backed assets exist';
+            END IF;
             IF EXISTS (SELECT 1 FROM post_media WHERE url IS NULL) THEN
                 RAISE EXCEPTION
                     'cannot downgrade media migration while uploaded media is attached';

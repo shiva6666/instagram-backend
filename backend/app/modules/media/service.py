@@ -49,6 +49,12 @@ class ImageReference(Protocol):
     media_id: UUID | None
 
 
+class ImageReference(Protocol):
+    position: int
+    url: str | None
+    media_id: UUID | None
+
+
 @dataclass(frozen=True, slots=True)
 class ResolvedImage:
     position: int
