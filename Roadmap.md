@@ -35,7 +35,7 @@ This status reflects the implemented modules, tests, and local workflows current
 | Home feed | Implemented on `main`: PostgreSQL chronological feed with visibility filtering, cursor pagination, and batched image hydration | Expand edge-case coverage and record a query-plan/performance baseline |
 | Web frontend | React/Vite client integrated with `/api/v1` through the development proxy; auth, feed, profiles, follows, and URL-based posts are implemented | Add UI-level tests; likes, comments, direct uploads, and profile editing await backend APIs |
 | Local development and demo data | `make dev` starts the local stack; `make seed` creates 30 users, 180 posts, image metadata, 150 follows, and block relationships. Reruns and demo login were verified locally | Keep seed assumptions aligned with future performance datasets |
-| Media upload/processing | Upload API, private MinIO storage, validation, variants, signed delivery, and cleanup implemented in the current media PR; worker-based async processing and full MinIO E2E proof remain | Add MinIO-backed E2E coverage, then move processing to a durable worker when justified |
+| Media upload/processing | Core image lifecycle implemented in PR #13; MinIO-backed upload-to-feed E2E is green in CI; durable worker remains deferred | Add failure-path E2E coverage; move processing to a durable worker when justified |
 
 ### Recently merged implementation slices
 
