@@ -64,6 +64,11 @@ jobs:
           echo "MinIO did not become ready" >&2
           exit 1
       - run: uv sync --extra dev --frozen
+      - name: Preview Ruff fixes (temporary)
+        run: |
+          uv run ruff check --fix app tests scripts migrations || true
+          uv run ruff format app tests scripts migrations
+          git diff -- app tests scripts migrations
       - run: uv run ruff check app tests scripts migrations
       - run: uv run ruff format --check app tests scripts migrations
       - run: uv run mypy app/core
