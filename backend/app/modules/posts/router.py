@@ -141,9 +141,30 @@ async def list_posts_by_author(
         raise HTTPException(status_code=404, detail="Author was not found") from error
     except InvalidPostCursorError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    responses = [
-        await _response(post, author, media_urls) for post in posts
-    ]
+    all_images = tuple(image for post in posts for image in post.images)
+    resolved_images = await media_urls.resolve(all_images)
+    responses: list[PostResponse] = []
+    image_offset = 0
+    for post in posts:
+        image_count = len(post.images)
+        post_images = resolved_images[image_offset : image_offset + image_count]
+        image_offset += image_count
+        responses.append(
+            PostResponse(
+                id=post.id,
+                user_id=post.user_id,
+                username=author.username,
+                user_avatar=author.avatar_key,
+                caption=post.caption,
+                post_img_url=[
+                    PostImageResponse(position=image.position, url=image.url)
+                    for image in post_images
+                ],
+                created_at=post.created_at,
+                is_private=post.is_private,
+                is_deleted=post.is_deleted,
+            )
+        )
     return PostListResponse(posts=responses, limit=limit, next_cursor=next_cursor)
 
 

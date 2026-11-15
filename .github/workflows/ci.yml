@@ -25,13 +25,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
-      minio:
-        image: ghcr.io/coollabsio/minio:RELEASE.2024-10-13T13-34-11Z
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        ports:
-          - 9000:9000
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/instagram
       AUTH_JWT_SECRET: ci-only-secret-that-is-longer-than-32-bytes
@@ -52,6 +45,14 @@ jobs:
           python-version: "3.15"
       - name: Install ImageMagick
         run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            ghcr.io/coollabsio/minio:RELEASE.2024-10-13T13-34-11Z \
+            server /data --console-address ":9001"
       - name: Wait for MinIO
         run: |
           for attempt in $(seq 1 30); do
@@ -68,6 +69,9 @@ jobs:
       - run: uv run mypy app/core
       - run: uv run alembic upgrade head
       - run: uv run pytest
+      - name: Stop MinIO
+        if: always()
+        run: docker rm -f minio || true
 
   frontend:
     runs-on: ubuntu-latest
