@@ -19,6 +19,17 @@ class Settings(BaseSettings):
     auth_access_token_ttl_seconds: int = 900
     auth_refresh_token_ttl_days: int = 30
 
+    media_storage_endpoint_url: str = "http://localhost:9000"
+    media_storage_public_endpoint_url: str = "http://localhost:9000"
+    media_storage_bucket: str = "instagram-media"
+    media_storage_region: str = "us-east-1"
+    media_storage_access_key: str = "minioadmin"
+    media_storage_secret_key: str = "minioadmin"
+    media_upload_ttl_seconds: int = 900
+    media_download_ttl_seconds: int = 900
+    media_max_upload_bytes: int = 10_485_760
+    media_cleanup_grace_hours: int = 24
+
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[3] / ".env",
         env_file_encoding="utf-8",

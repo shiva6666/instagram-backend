@@ -28,6 +28,13 @@ jobs:
     env:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/instagram
       AUTH_JWT_SECRET: ci-only-secret-that-is-longer-than-32-bytes
+      MEDIA_STORAGE_ENDPOINT_URL: http://localhost:9000
+      MEDIA_STORAGE_PUBLIC_ENDPOINT_URL: http://localhost:9000
+      MEDIA_STORAGE_BUCKET: instagram-ci
+      MEDIA_STORAGE_REGION: us-east-1
+      MEDIA_STORAGE_ACCESS_KEY: minioadmin
+      MEDIA_STORAGE_SECRET_KEY: minioadmin
+      RUN_MEDIA_INTEGRATION_TESTS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -36,12 +43,35 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.15"
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            tobi312/minio:RELEASE.2024-10-13T13-34-11Z \
+            server /data --console-address ":9001"
+      - name: Wait for MinIO
+        run: |
+          for attempt in $(seq 1 30); do
+            if python -c "from urllib.request import urlopen; urlopen('http://localhost:9000/minio/health/live', timeout=1)"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MinIO did not become ready" >&2
+          exit 1
       - run: uv sync --extra dev --frozen
       - run: uv run ruff check app tests scripts migrations
       - run: uv run ruff format --check app tests scripts migrations
       - run: uv run mypy app/core
       - run: uv run alembic upgrade head
       - run: uv run pytest
+      - name: Stop MinIO
+        if: always()
+        run: docker rm -f minio || true
 
   frontend:
     runs-on: ubuntu-latest

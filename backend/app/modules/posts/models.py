@@ -26,7 +26,8 @@ class PostLifecycle:
 @dataclass(frozen=True, slots=True)
 class PostImage:
     position: int
-    url: str
+    url: str | None
+    media_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)

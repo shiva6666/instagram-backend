@@ -10,12 +10,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends imagemagick \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first (layer caching: only rebuilds when uv.lock / pyproject.toml change)
 COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy application code and install project
 COPY app ./app
+COPY scripts ./scripts
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8000

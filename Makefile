@@ -1,4 +1,4 @@
-.PHONY: up down stop logs dev test lint format typecheck migrate seed
+.PHONY: up down stop logs dev test lint format typecheck migrate seed cleanup-media
 
 up:
 	docker compose up --build -d
@@ -32,3 +32,6 @@ migrate:
 
 seed:
 	cd backend && uv run --extra dev python scripts/seed.py
+
+cleanup-media:
+	cd backend && uv run python scripts/cleanup_media.py
