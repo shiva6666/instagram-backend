@@ -25,9 +25,7 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
             raise
 
 
-DatabaseSession = Annotated[
-    AsyncSession, Depends(get_db_session, scope="function")
-]
+DatabaseSession = Annotated[AsyncSession, Depends(get_db_session, scope="function")]
 
 
 async def get_current_user(
