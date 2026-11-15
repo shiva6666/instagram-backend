@@ -51,7 +51,7 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
-            ghcr.io/coollabsio/minio:RELEASE.2024-10-13T13-34-11Z \
+            coollabsio/minio:RELEASE.2024-10-13T13-34-11Z \
             server /data --console-address ":9001"
       - name: Wait for MinIO
         run: |
