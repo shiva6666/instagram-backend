@@ -226,7 +226,7 @@ Start with images. Add video only after the image path is reliable.
 - [x] Define cleanup for abandoned uploads and discarded media; cleanup is a retryable one-shot job.
 - [ ] Add MinIO-backed end-to-end tests for successful upload, invalid content, expired URL, retry, and storage/processing failure.
 
-Image processing currently runs synchronously during upload completion. Move it to a durable worker/outbox flow after the core media path has MinIO-backed end-to-end coverage.
+Decision details, alternatives, and failure boundaries are recorded in [ADR 0002](docs/adr/0002-image-media-lifecycle.md). Image processing currently runs synchronously during upload completion. Move it to a durable worker/outbox flow after the core media path has MinIO-backed end-to-end coverage. Add failure-path MinIO integration tests and stale-PROCESSING recovery before treating the lifecycle as operationally complete.
 
 ### Exit criteria
 
