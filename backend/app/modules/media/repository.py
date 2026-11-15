@@ -56,12 +56,8 @@ class MediaRow(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     width: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     height: Mapped[int | None] = mapped_column(Integer(), nullable=True)
-    display_object_key: Mapped[str | None] = mapped_column(
-        String(512), nullable=True
-    )
-    thumbnail_object_key: Mapped[str | None] = mapped_column(
-        String(512), nullable=True
-    )
+    display_object_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    thumbnail_object_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     upload_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -69,8 +65,12 @@ class MediaRow(Base):
         DateTime(timezone=True), nullable=True
     )
     failure_reason: Mapped[str | None] = mapped_column(String(240), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
 
 def _to_domain(row: MediaRow) -> Media:

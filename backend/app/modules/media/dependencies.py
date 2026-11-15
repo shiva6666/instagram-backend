@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends
+
 from app.modules.auth.dependencies import DatabaseSession
 from app.modules.media.processing import ImageMagickProcessor
 from app.modules.media.repository import SqlAlchemyMediaRepository

@@ -11,10 +11,10 @@ import pytest
 from app.modules.media.models import Media, MediaStatus
 from app.modules.media.processing import ProcessedImage
 from app.modules.media.service import (
-    MediaUrlResolver,
     MediaConflictError,
     MediaForbiddenError,
     MediaService,
+    MediaUrlResolver,
 )
 from app.modules.media.storage.interfaces import StoredObject
 from app.modules.posts.models import PostImage

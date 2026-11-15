@@ -106,7 +106,6 @@ def upgrade() -> None:
         ondelete="RESTRICT",
     )
     op.create_unique_constraint("uq_post_media_media_id", "post_media", ["media_id"])
-    op.create_index("ix_post_media_media_id", "post_media", ["media_id"])
 
 
 def downgrade() -> None:
@@ -126,7 +125,6 @@ def downgrade() -> None:
         $$;
         """
     )
-    op.drop_index("ix_post_media_media_id", table_name="post_media")
     op.drop_constraint("uq_post_media_media_id", "post_media", type_="unique")
     op.drop_constraint("fk_post_media_media_id", "post_media", type_="foreignkey")
     op.alter_column("post_media", "url", nullable=False)

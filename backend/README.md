@@ -66,6 +66,7 @@ it for cleanup. `make cleanup-media` removes explicitly discarded assets and
 unattached assets older than the configured 24-hour grace period. Run this
 command periodically in development/operations. Cleanup claims rows before
 deleting objects and is safe to retry. Media attached to soft-deleted posts is
+also detached and cleaned up after the same grace period. Media attached to soft-deleted posts is
 also detached and cleaned up after the same grace period.
 
 The completion endpoint performs bounded image processing inline in this

@@ -52,8 +52,7 @@ class ImageMagickProcessor:
             result = subprocess.run(
                 command,
                 input=image_bytes,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False,
                 timeout=20,
             )
@@ -78,16 +77,31 @@ class ImageMagickProcessor:
             raise InvalidImageError("file content does not match declared content type")
 
         limits = [
-            "-limit", "memory", "128MiB",
-            "-limit", "map", "256MiB",
-            "-limit", "disk", "512MiB",
-            "-limit", "time", "15",
-            "-limit", "thread", "1",
+            "-limit",
+            "memory",
+            "128MiB",
+            "-limit",
+            "map",
+            "256MiB",
+            "-limit",
+            "disk",
+            "512MiB",
+            "-limit",
+            "time",
+            "15",
+            "-limit",
+            "thread",
+            "1",
         ]
-        metadata = self._run(
-            ["identify", *limits, "-format", "%m|%w|%h|%n\n", "-"],
-            image_bytes,
-        ).decode("ascii", errors="strict").strip().splitlines()
+        metadata = (
+            self._run(
+                ["identify", *limits, "-format", "%m|%w|%h|%n\n", "-"],
+                image_bytes,
+            )
+            .decode("ascii", errors="strict")
+            .strip()
+            .splitlines()
+        )
         if len(metadata) != 1:
             raise InvalidImageError("animated or multi-frame images are not supported")
 
@@ -119,16 +133,35 @@ class ImageMagickProcessor:
 
         display = self._run(
             [
-                "convert", *limits, "-", "-auto-orient", "-strip",
-                "-resize", "1600x1600>", "-quality", "85", "webp:-",
+                "convert",
+                *limits,
+                "-",
+                "-auto-orient",
+                "-strip",
+                "-resize",
+                "1600x1600>",
+                "-quality",
+                "85",
+                "webp:-",
             ],
             image_bytes,
         )
         thumbnail = self._run(
             [
-                "convert", *limits, "-", "-auto-orient", "-strip",
-                "-thumbnail", "320x320^", "-gravity", "center",
-                "-extent", "320x320", "-quality", "80", "webp:-",
+                "convert",
+                *limits,
+                "-",
+                "-auto-orient",
+                "-strip",
+                "-thumbnail",
+                "320x320^",
+                "-gravity",
+                "center",
+                "-extent",
+                "320x320",
+                "-quality",
+                "80",
+                "webp:-",
             ],
             image_bytes,
         )

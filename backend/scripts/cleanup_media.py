@@ -16,7 +16,6 @@ from app.core.db import session_factory
 from app.modules.media.storage.interfaces import ObjectStorageError
 from app.modules.media.storage.s3 import S3CompatibleStorage
 
-
 CLAIM_SQL = text(
     """
     WITH candidates AS (

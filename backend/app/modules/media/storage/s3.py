@@ -70,7 +70,9 @@ class S3CompatibleStorage:
         public: bool,
     ) -> str:
         if not 1 <= expires_in <= 604800:
-            raise ValueError("presigned URL expiry must be between 1 and 604800 seconds")
+            raise ValueError(
+                "presigned URL expiry must be between 1 and 604800 seconds"
+            )
         endpoint = self._public_endpoint_url if public else self._endpoint_url
         parsed = urlsplit(endpoint)
         host = parsed.netloc
@@ -113,14 +115,10 @@ class S3CompatibleStorage:
         )
 
     def presign_put_url(self, object_key: str, *, expires_in: int) -> str:
-        return self._presign(
-            "PUT", object_key, expires_in=expires_in, public=True
-        )
+        return self._presign("PUT", object_key, expires_in=expires_in, public=True)
 
     def presign_get_url(self, object_key: str, *, expires_in: int) -> str:
-        return self._presign(
-            "GET", object_key, expires_in=expires_in, public=True
-        )
+        return self._presign("GET", object_key, expires_in=expires_in, public=True)
 
     def _request_sync(
         self,
@@ -159,17 +157,13 @@ class S3CompatibleStorage:
             raise ObjectStorageError("object storage request failed") from error
 
     async def ensure_bucket(self) -> None:
-        head_url = self._presign(
-            "HEAD", None, expires_in=60, public=False
-        )
+        head_url = self._presign("HEAD", None, expires_in=60, public=False)
         result = await asyncio.to_thread(
             self._request_sync, "HEAD", head_url, missing_is_ok=True
         )
         if result is not None:
             return
-        create_url = self._presign(
-            "PUT", None, expires_in=60, public=False
-        )
+        create_url = self._presign("PUT", None, expires_in=60, public=False)
         await asyncio.to_thread(self._request_sync, "PUT", create_url)
 
     async def head_object(self, object_key: str) -> StoredObject:
@@ -209,6 +203,4 @@ class S3CompatibleStorage:
 
     async def delete_object(self, object_key: str) -> None:
         url = self._presign("DELETE", object_key, expires_in=60, public=False)
-        await asyncio.to_thread(
-            self._request_sync, "DELETE", url, missing_is_ok=True
-        )
+        await asyncio.to_thread(self._request_sync, "DELETE", url, missing_is_ok=True)

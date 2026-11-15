@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_MEDIA_INTEGRATION_TESTS") != "1",
     reason="requires PostgreSQL, MinIO, and ImageMagick",
@@ -21,20 +20,10 @@ pytestmark = pytest.mark.skipif(
 def _png_bytes() -> bytes:
     def chunk(kind: bytes, data: bytes) -> bytes:
         checksum = zlib.crc32(kind + data) & 0xFFFFFFFF
-        return (
-            struct.pack(">I", len(data))
-            + kind
-            + data
-            + struct.pack(">I", checksum)
-        )
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", checksum)
 
     header = struct.pack(">IIBBBBB", 2, 2, 8, 2, 0, 0, 0)
-    pixels = (
-        b"\x00"
-        + b"\xff\x00\x00" * 2
-        + b"\x00"
-        + b"\x00\xff\x00" * 2
-    )
+    pixels = b"\x00" + b"\xff\x00\x00" * 2 + b"\x00" + b"\x00\xff\x00" * 2
     return (
         b"\x89PNG\r\n\x1a\n"
         + chunk(b"IHDR", header)

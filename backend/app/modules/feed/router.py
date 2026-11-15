@@ -41,9 +41,7 @@ async def get_home_feed(
     except InvalidFeedCursorError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    all_images = tuple(
-        image for item in page.items for image in item.post.images
-    )
+    all_images = tuple(image for item in page.items for image in item.post.images)
     resolved_images = await media_urls.resolve(all_images)
     posts: list[PostResponse] = []
     image_offset = 0

@@ -10,11 +10,7 @@ from app.core.ids import new_uuid7
 from app.modules.media.models import Media, MediaStatus
 from app.modules.media.processing import ImageProcessor, InvalidImageError
 from app.modules.media.repository import MediaRepository
-from app.modules.media.storage.interfaces import (
-    ObjectNotFoundError,
-    ObjectStorage,
-)
-
+from app.modules.media.storage.interfaces import ObjectNotFoundError, ObjectStorage
 
 ALLOWED_CONTENT_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
 
@@ -41,12 +37,6 @@ class UploadTicket:
     upload_url: str
     expires_at: datetime
     content_type: str
-
-
-class ImageReference(Protocol):
-    position: int
-    url: str | None
-    media_id: UUID | None
 
 
 class ImageReference(Protocol):
@@ -256,8 +246,7 @@ class MediaUrlResolver:
             if image.media_id is not None and image.url is None
         ]
         media_by_id = {
-            media.id: media
-            for media in await self._repository.get_by_ids(media_ids)
+            media.id: media for media in await self._repository.get_by_ids(media_ids)
         }
         resolved: list[ResolvedImage] = []
         for image in images:
