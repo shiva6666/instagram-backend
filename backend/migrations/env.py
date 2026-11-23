@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
 from app.core.db import Base
+from app.modules.likes import repository as _likes_repository  # noqa: F401
 from app.modules.media import repository as _media_repository  # noqa: F401
 from app.modules.posts import repository as _posts_repository  # noqa: F401
 from app.modules.users import repository as _users_repository  # noqa: F401
