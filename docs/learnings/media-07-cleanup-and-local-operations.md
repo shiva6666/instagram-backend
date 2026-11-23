@@ -48,4 +48,4 @@ make cleanup-media
 - Processing tests cover focused image processor behavior.
 - The MinIO-backed API integration test is opt-in with `RUN_MEDIA_INTEGRATION_TESTS=1` and needs PostgreSQL, MinIO, and ImageMagick. It covers upload ticket creation, direct PUT, completion, post attachment, signed WebP delivery, and feed hydration.
 
-The current end-to-end test is a happy-path test. Storage outages, expired tickets, partial variant writes, and cleanup failures still need dedicated MinIO-backed failure-path coverage; see the follow-ups in the [media lifecycle decision](../adr/0002-image-media-lifecycle.md).
+The end-to-end test covers the happy path. PR #14 added dedicated coverage for invalid content, expired tickets without an uploaded object, transient object-read failures, and partial variant writes. Cleanup deletion-failure/retry still needs dedicated MinIO-backed integration coverage; see the follow-ups in the [media lifecycle decision](../adr/0004-image-media-lifecycle.md).
