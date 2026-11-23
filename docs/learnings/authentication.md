@@ -1,6 +1,6 @@
 # Authentication: Architecture, Security Model, and Implementation Notes
 
-> **Document status:** Architecture and learning notes; authentication is not yet implemented.
+ > **Document status:** Historical design and learning notes. Authentication is implemented; use the current ADR and implementation notes for the authoritative behavior.
 >
 > **Scope:** Password-based authentication for the current FastAPI modular monolith, with a design that can evolve without prematurely introducing a separate auth service.
 >
@@ -154,10 +154,10 @@ The current repository has a modular-monolith architecture:
 
 - \`app/main.py\` creates the FastAPI application and includes the API router.
 - \`app/api/router.py\` currently includes the health router; authentication routes are not wired yet.
-- \`app/core/config.py\` owns application configuration.
-- \`app/core/db.py\` owns the async SQLAlchemy engine/session infrastructure.
-- \`app/modules/users/models.py\` defines an immutable domain \`User\` dataclass.
-- \`app/modules/users/repository.py\` contains the users repository port and SQLAlchemy adapter/\`UserRow\`.
+- \`backend/app/core/config.py\` owns application configuration.
+- \`backend/app/core/db.py\` owns the async SQLAlchemy engine/session infrastructure.
+- \`backend/app/modules/users/models.py\` defines an immutable domain \`User\` dataclass.
+- \`backend/app/modules/users/repository.py\` contains the users repository port and SQLAlchemy adapter/\`UserRow\`.
 - The current users table stores profile/account fields, not password credentials.
 - The roadmap lists JWT access/refresh tokens and Argon2 hashing in Week 2.
 
