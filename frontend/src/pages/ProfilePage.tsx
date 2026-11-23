@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { PostCard } from "../components/PostCard";
@@ -85,7 +85,7 @@ export function ProfilePage() {
         <div className="profile-info">
           <div className="profile-title-row"><h1>{profile.username}</h1>
             {!isOwnProfile && <button className={relationship?.status ? "secondary-button" : "primary-button"} onClick={() => void toggleFollow()} disabled={busy}>{busy ? "…" : followLabel}</button>}
-            {isOwnProfile && <span className="profile-you">You</span>}
+            {isOwnProfile && <Link to="/settings/profile" className="secondary-button">Edit profile</Link>}
           </div>
           <div className="profile-stats">
             <span><strong>{posts.length}</strong> posts</span>
