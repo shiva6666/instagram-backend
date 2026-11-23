@@ -70,7 +70,9 @@ class FakeLikeRepository:
         )
 
 
-def make_service() -> tuple[LikeService, FakeLikeRepository, FakePostService, User, UUID]:
+def make_service() -> tuple[
+    LikeService, FakeLikeRepository, FakePostService, User, UUID
+]:
     actor = make_user()
     post_id = uuid4()
     repository = FakeLikeRepository()
