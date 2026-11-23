@@ -7,6 +7,16 @@ local S3-compatible object store for private media bytes. Redpanda, Prometheus,
 and Grafana are available in the local Compose environment for later roadmap
 phases; their presence does not mean the application already depends on them.
 
+## Architecture decision records
+
+The durable trade-offs are indexed in [`docs/adr/README.md`](adr/README.md). In particular:
+- [ADR 0001](adr/0001-modular-monolith.md) records the modular-monolith boundary.
+- [ADR 0002](adr/0002-id-strategy.md) records UUIDv7 identifier generation.
+- [ADR 0003](adr/0003-authentication-tokens.md) records access/refresh token behavior and the current browser-storage hardening gap.
+- [ADR 0004](adr/0004-image-media-lifecycle.md) records image upload, processing, delivery, and retry boundaries.
+- [ADR 0005](adr/0005-likes-relationship.md) records idempotent likes.
+- [ADR 0006](adr/0006-postgresql-chronological-feed.md) records the PostgreSQL chronological feed baseline.
+
 ## Repository boundaries
 
 - `backend/app/api`: HTTP routers and API versioning
