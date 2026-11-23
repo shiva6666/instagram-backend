@@ -108,7 +108,6 @@ def test_upload_process_attach_and_read_media_end_to_end() -> None:
         assert discarded.status_code == 409
 
 
-
 def _upload_image(client: TestClient, headers: dict[str, str], image_bytes: bytes) -> str:
     ticket_response = client.post(
         "/api/v1/media/upload-url",
