@@ -8,6 +8,10 @@ import type {
   PublicProfile,
   TokenResponse,
   User,
+  MediaUploadTicket,
+  MediaStatus,
+  OwnProfile,
+  FollowPage,
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -93,7 +97,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 204) return undefined as T;
+    if (response.status === 204 || response.status === 202) return undefined as T;
     let payload: ApiError = {};
     try {
       payload = (await response.json()) as ApiError;
@@ -103,7 +107,7 @@ async function request<T>(
     throw new Error(errorMessage(payload, `Request failed (${response.status})`));
   }
 
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204 || response.status === 202) return undefined as T;
   return (await response.json()) as T;
 }
 
@@ -144,14 +148,39 @@ export const api = {
     if (cursor) query.set("cursor", cursor);
     return request<Page<Post>>(`/feed?${query.toString()}`);
   },
-  createPost: (caption: string, imageUrls: string[]) =>
+  createPost: (caption: string, mediaIds: string[]) =>
     request<Post>("/posts", {
       method: "POST",
       body: JSON.stringify({
-        caption: caption || null,
-        post_img_url: imageUrls.map((url) => ({ url })),
+        caption: caption.trim() || null,
+        media_ids: mediaIds,
         is_private: false,
       }),
+    }),
+  createMediaUpload: (contentType: string, sizeBytes: number) =>
+    request<MediaUploadTicket>("/media/upload-url", {
+      method: "POST",
+      body: JSON.stringify({ content_type: contentType, size_bytes: sizeBytes }),
+    }),
+  uploadMediaObject: async (uploadUrl: string, file: File, contentType: string) => {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!response.ok) {
+      throw new Error(`Image upload failed (${response.status})`);
+    }
+  },
+  completeMediaUpload: (mediaId: string) =>
+    request<MediaStatus>(`/media/${mediaId}/complete`, { method: "POST" }),
+  mediaStatus: (mediaId: string) => request<MediaStatus>(`/media/${mediaId}`),
+  discardMedia: (mediaId: string) =>
+    request<void>(`/media/${mediaId}`, { method: "DELETE" }),
+  updateMyProfile: (input: { bio?: string; is_private?: boolean }) =>
+    request<OwnProfile>("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(input),
     }),
   deletePost: (postId: string) =>
     request<void>(`/posts/${postId}`, { method: "DELETE" }),
@@ -176,4 +205,11 @@ export const api = {
     }),
   counts: (username: string) =>
     request<FollowCounts>(`/follows/${encodeURIComponent(username)}/counts`),
+  followList: (username: string, connection: "followers" | "following", limit = 20, cursor?: string) => {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    return request<FollowPage>(
+      `/follows/${encodeURIComponent(username)}/${connection}?${query.toString()}`,
+    );
+  },
 };

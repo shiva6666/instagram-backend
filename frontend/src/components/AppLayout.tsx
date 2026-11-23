@@ -57,7 +57,7 @@ export function AppLayout() {
         <div className="rail-note">
           <span className="eyebrow">BUILT IN PUBLIC</span>
           <h3>A social app, one system at a time.</h3>
-          <p>This frontend is a client for your FastAPI modules. Likes, comments and media uploads will arrive when their backend APIs do.</p>
+          <p>This frontend follows the backend as it grows: direct image uploads, processing and profile editing are now connected. Likes and comments are the next product APIs.</p>
         </div>
         <p className="footer-note">About · Help · Privacy · Terms<br />© 2026 Frame</p>
       </aside>

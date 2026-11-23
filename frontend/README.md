@@ -25,13 +25,18 @@ Open <http://localhost:5173>. Vite proxies `/api` to the backend, avoiding the n
 - Authenticated home feed with cursor-based load more
 - User profile and post list
 - Follow / unfollow and relationship state
-- Create a post from one or more image URLs
+- Paginated follower and following lists
+- Create posts with up to 10 direct-to-object-storage image uploads (JPEG, PNG, WebP; 10 MB each)
+- Verify and process uploads through the media API before attaching media IDs to posts
+- Retry transient completion failures without re-uploading an already transferred original
+- Discard unattached uploads when removing them from the composer
+- Edit profile bio and public/private account setting
 - Delete your own posts
 - Find a profile by exact username
 
 ## API contract
 
-The client targets the existing `/api/v1` routes and Pydantic response shapes. Likes, comments, direct media uploads, notifications, and profile editing are intentionally not implemented because those backend endpoints are not currently available.
+The client targets the existing `/api/v1` routes and Pydantic response shapes. Direct media upload uses the API to create an upload ticket, sends the file with a browser PUT to the presigned object-storage URL, then calls the completion endpoint. Posts are created only with media IDs whose processing status is `ready`. The backend still does not expose likes, comments, notifications, or block-management routes, so those interactions are intentionally not shown.
 
 ## Authentication security note
 
