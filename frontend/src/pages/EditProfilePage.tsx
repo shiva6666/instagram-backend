@@ -16,7 +16,7 @@ export function EditProfilePage() {
     setError("");
     setSaving(true);
     try {
-      const updated = await api.updateMyProfile({ bio: bio.trim() || null, is_private: isPrivate });
+      const updated = await api.updateMyProfile({ bio: bio.trim(), is_private: isPrivate });
       updateUser({ ...user!, ...updated });
       navigate(`/profile/${encodeURIComponent(updated.username)}`);
     } catch (cause) {
