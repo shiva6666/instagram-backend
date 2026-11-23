@@ -33,6 +33,6 @@ The guard is conservative: operators should resolve or intentionally migrate the
 - `backend/migrations/versions/005_media_assets.py` — upgrade, data backfill, constraints, and downgrade guard.
 - `backend/app/modules/media/repository.py` — ORM mapping for the `media` table.
 - `backend/app/modules/posts/repository.py` — ORM mapping and compatibility persistence for `post_media`.
-- `docs/adr/0002-image-media-lifecycle.md` — the decisions behind this schema.
+- `docs/adr/0004-image-media-lifecycle.md` — the decisions behind this schema.
 
 Apply migrations through the existing root command: `make migrate`.
