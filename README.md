@@ -92,4 +92,4 @@ For backend-specific setup and commands, see [backend/README.md](backend/README.
 9. Observability, load testing, and reliability
 10. Analytics and recommendation experiments
 
-See the [project roadmap](Roadmap.md), [architecture overview](docs/architecture.md), [media lifecycle decision](docs/adr/0002-image-media-lifecycle.md), and [learning notes](docs/learnings/), including the [likes relationship design](docs/learnings/likes-01-like-relationships.md).
+See the [project roadmap](Roadmap.md), [architecture overview](docs/architecture.md), [media lifecycle decision](docs/adr/0004-image-media-lifecycle.md), and [learning notes](docs/learnings/), including the [likes relationship design](docs/learnings/likes-01-like-relationships.md).
