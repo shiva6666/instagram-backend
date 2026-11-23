@@ -229,7 +229,7 @@ Start with images. Add video only after the image path is reliable.
 - [x] Add a service test for an expired upload ticket whose object never arrived.
 - [ ] Add MinIO-backed cleanup deletion-failure/retry coverage.
 
-Decision details, alternatives, and failure boundaries are recorded in [ADR 0002](docs/adr/0002-image-media-lifecycle.md). Image processing currently runs synchronously during upload completion. The request-scoped database transaction rolls back an uncommitted PROCESSING state when storage or processing raises, so a stale-PROCESSING sweeper is not needed in this design. Deterministic variant keys make partial object writes safe to retry. Cleanup has a separate committed DELETING claim and still needs an end-to-end deletion-failure/retry test. Move processing to a durable worker/outbox flow only when there is a concrete need; that future design will require a committed claim/lease and its own recovery semantics.
+Decision details, alternatives, and failure boundaries are recorded in [ADR 0004](docs/adr/0004-image-media-lifecycle.md). Image processing currently runs synchronously during upload completion. The request-scoped database transaction rolls back an uncommitted PROCESSING state when storage or processing raises, so a stale-PROCESSING sweeper is not needed in this design. Deterministic variant keys make partial object writes safe to retry. Cleanup has a separate committed DELETING claim and still needs an end-to-end deletion-failure/retry test. Move processing to a durable worker/outbox flow only when there is a concrete need; that future design will require a committed claim/lease and its own recovery semantics.
 
 ### Exit criteria
 
