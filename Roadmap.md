@@ -120,7 +120,7 @@ A new clone can be configured, start locally, apply migrations, pass CI, and ans
 
 ### 1B. Implement
 
-- [x] Add `app/modules/auth/` with router, schemas, service, repository, token/security helpers, and dependencies.
+- [x] Add `backend/app/modules/auth/` with router, schemas, service, repository, token/security helpers, and dependencies.
 - [x] Add an Alembic migration for auth identities and refresh-token sessions.
 - [x] Implement Argon2id hash and verify; never store or log plaintext passwords.
 - [x] Issue short-lived JWT access tokens with explicit issuer, audience, subject, issued-at, expiry, token ID, and a fixed allowed algorithm.
