@@ -94,3 +94,20 @@ export interface MediaStatus {
   failure_reason: string | null;
   cleanup_requested_at: string | null;
 }
+
+
+export interface FollowUser {
+  id: string;
+  username: string;
+  bio: string | null;
+  avatar_key: string | null;
+  is_private: boolean;
+  created_at: string;
+  followed_at: string;
+}
+
+export interface FollowPage {
+  users: FollowUser[];
+  limit: number;
+  next_cursor: string | null;
+}
