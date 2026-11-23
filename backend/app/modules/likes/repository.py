@@ -14,15 +14,11 @@ from app.core.db import Base
 
 
 class LikeRepository(Protocol):
-    async def add(
-        self, user_id: UUID, post_id: UUID, created_at: datetime
-    ) -> bool: ...
+    async def add(self, user_id: UUID, post_id: UUID, created_at: datetime) -> bool: ...
 
     async def remove(self, user_id: UUID, post_id: UUID) -> bool: ...
 
-    async def get_status(
-        self, user_id: UUID, post_id: UUID
-    ) -> tuple[bool, int]: ...
+    async def get_status(self, user_id: UUID, post_id: UUID) -> tuple[bool, int]: ...
 
 
 class LikeRow(Base):
@@ -53,9 +49,7 @@ class SqlAlchemyLikeRepository:
         statement = (
             pg_insert(LikeRow)
             .values(user_id=user_id, post_id=post_id, created_at=created_at)
-            .on_conflict_do_nothing(
-                index_elements=[LikeRow.user_id, LikeRow.post_id]
-            )
+            .on_conflict_do_nothing(index_elements=[LikeRow.user_id, LikeRow.post_id])
             .returning(LikeRow.user_id)
         )
         inserted_user_id = await self._session.scalar(statement)
