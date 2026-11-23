@@ -160,7 +160,8 @@ sequenceDiagram
 
 - Image processing is synchronous inside upload completion in this first vertical slice. It is bounded, but slow processing holds the request open and may hold a database row lock/transaction while storage and processing work occurs.
 - PostgreSQL cannot atomically commit object writes. A failure after setting `PROCESSING` or after writing only one variant can leave partial state/objects.
-- The current happy-path MinIO end-to-end test does not prove every storage outage, malformed payload, expired URL, and retry scenario.
+- PR #14 adds MinIO-backed coverage for invalid image bytes, transient object-read failure with rollback/retry, and partial variant write/retry, plus a service test for an expired upload with no object. These tests do not prove every possible storage outage or operational failure.
+- Cleanup deletion-failure/retry still lacks MinIO-backed integration coverage.
 - Signed URLs are bearer capabilities until expiry; their TTL must remain short and they must not be logged.
 
 ## Follow-up work
