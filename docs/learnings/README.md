@@ -13,6 +13,7 @@ The original [PR #13 deep dive](./pr13-media-lifecycle.md) is a broad reference.
 5. [Post, feed, and private image delivery](./media-05-post-feed-integration.md)
 6. [Schema migration and legacy data](./media-06-schema-and-legacy-migration.md)
 7. [Retryable cleanup and local operations](./media-07-cleanup-and-local-operations.md)
+8. [Media reliability: failures, retries, and transaction boundaries](./media-08-reliability.md)
 
 ## Suggested entry format
 

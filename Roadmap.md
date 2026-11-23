@@ -35,7 +35,7 @@ This status reflects the implemented modules, tests, and local workflows current
 | Home feed | Implemented on `main`: PostgreSQL chronological feed with visibility filtering, cursor pagination, and batched image hydration | Expand edge-case coverage and record a query-plan/performance baseline |
 | Web frontend | React/Vite client integrated with `/api/v1` through the development proxy; auth, feed, profiles, follows, and URL-based posts are implemented | Add UI-level tests; likes, comments, direct uploads, and profile editing await backend APIs |
 | Local development and demo data | `make dev` starts the local stack; `make seed` creates 30 users, 180 posts, image metadata, 150 follows, and block relationships. Reruns and demo login were verified locally | Keep seed assumptions aligned with future performance datasets |
-| Media upload/processing | Core image lifecycle implemented in PR #13; MinIO-backed upload-to-feed E2E is green in CI; durable worker remains deferred | Add failure-path E2E coverage; move processing to a durable worker when justified |
+| Media upload/processing | Core image lifecycle and MinIO-backed happy path implemented; reliability tests now cover invalid bytes and retry after transient/partial storage failures | Add cleanup deletion/retry integration coverage; keep durable workers deferred until justified |
 
 ### Recently merged implementation slices
 
@@ -224,9 +224,12 @@ Start with images. Add video only after the image path is reliable.
 - [x] Make completion retryable and idempotent; use deterministic object keys for generated variants.
 - [x] Ensure posts with media are not visible as ready until required processing succeeds.
 - [x] Define cleanup for abandoned uploads and discarded media; cleanup is a retryable one-shot job.
-- [ ] Add MinIO-backed end-to-end tests for successful upload, invalid content, expired URL, retry, and storage/processing failure.
+- [x] Keep the MinIO-backed successful upload-to-feed end-to-end test.
+- [x] Add MinIO-backed tests for invalid image bytes, transient object-read failure, and retry after a partial variant write.
+- [x] Add a service test for an expired upload ticket whose object never arrived.
+- [ ] Add MinIO-backed cleanup deletion-failure/retry coverage.
 
-Decision details, alternatives, and failure boundaries are recorded in [ADR 0002](docs/adr/0002-image-media-lifecycle.md). Image processing currently runs synchronously during upload completion. Move it to a durable worker/outbox flow after the core media path has MinIO-backed end-to-end coverage. Add failure-path MinIO integration tests and stale-PROCESSING recovery before treating the lifecycle as operationally complete.
+Decision details, alternatives, and failure boundaries are recorded in [ADR 0002](docs/adr/0002-image-media-lifecycle.md). Image processing currently runs synchronously during upload completion. The request-scoped database transaction rolls back an uncommitted PROCESSING state when storage or processing raises, so a stale-PROCESSING sweeper is not needed in this design. Deterministic variant keys make partial object writes safe to retry. Cleanup has a separate committed DELETING claim and still needs an end-to-end deletion-failure/retry test. Move processing to a durable worker/outbox flow only when there is a concrete need; that future design will require a committed claim/lease and its own recovery semantics.
 
 ### Exit criteria
 

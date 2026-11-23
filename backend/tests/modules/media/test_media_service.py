@@ -16,7 +16,7 @@ from app.modules.media.service import (
     MediaService,
     MediaUrlResolver,
 )
-from app.modules.media.storage.interfaces import StoredObject
+from app.modules.media.storage.interfaces import ObjectNotFoundError, StoredObject
 from app.modules.posts.models import PostImage
 
 
@@ -333,3 +333,38 @@ def test_complete_upload_allows_finalization_after_upload_url_expiry() -> None:
     completed = run(service.complete_upload(owner_id=owner_id, media_id=media.id))
 
     assert completed.status == MediaStatus.READY
+
+
+def test_expired_upload_without_object_is_failed_and_scheduled_for_cleanup() -> None:
+    repository = FakeMediaRepository()
+    storage = FakeStorage()
+    owner_id = uuid4()
+    now = datetime.now(UTC)
+    media = Media(
+        id=uuid4(),
+        owner_id=owner_id,
+        object_key="original/test/missing-source",
+        url=None,
+        content_type="image/png",
+        size_bytes=None,
+        status=MediaStatus.PENDING,
+        width=None,
+        height=None,
+        created_at=now - timedelta(hours=1),
+        updated_at=now - timedelta(hours=1),
+        expected_size_bytes=4,
+        upload_expires_at=now - timedelta(minutes=10),
+    )
+    repository.items[media.id] = media
+
+    async def missing_object(_object_key: str) -> StoredObject:
+        raise ObjectNotFoundError("uploaded object was not found")
+
+    storage.head_object = missing_object  # type: ignore[method-assign]
+    service = MediaService(repository, storage, FakeProcessor())
+
+    failed = run(service.complete_upload(owner_id=owner_id, media_id=media.id))
+
+    assert failed.status == MediaStatus.FAILED
+    assert failed.cleanup_requested_at is not None
+    assert failed.failure_reason == "upload URL expired before an object was uploaded"
