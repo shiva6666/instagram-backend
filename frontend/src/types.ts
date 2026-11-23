@@ -70,3 +70,27 @@ export interface TokenResponse {
 export interface ApiError {
   detail?: string | { msg?: string }[];
 }
+
+
+export interface OwnProfile extends User {
+  updated_at: string;
+}
+
+export interface MediaUploadTicket {
+  media_id: string;
+  upload_url: string;
+  method: "PUT";
+  content_type: string;
+  expires_at: string;
+}
+
+export interface MediaStatus {
+  media_id: string;
+  status: "pending" | "processing" | "ready" | "failed" | "deleting";
+  content_type: string | null;
+  size_bytes: number | null;
+  width: number | null;
+  height: number | null;
+  failure_reason: string | null;
+  cleanup_requested_at: string | null;
+}
