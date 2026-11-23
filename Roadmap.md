@@ -410,6 +410,59 @@ Do not add Redis timelines, Kafka/Redpanda consumers, fan-out workers, or rankin
 
 **Definition of done for feed scaling:** expanded PostgreSQL feed coverage is green and a reproducible query-plan/performance baseline is recorded.
 
+## Original system-design blueprint mapped to milestones
+
+The system-design image in the README is the **long-term target architecture**. This section makes that diagram actionable without turning every large-scale component into an MVP requirement. The existing numbered milestones below remain the delivery plan; this map explains how each region of the original diagram is delivered over time.
+
+### Milestone status at this checkpoint
+
+| Milestone | Scope | Status | What remains before it is considered complete |
+|---|---|---|---|
+| 0 — Foundation and workflow | Local stack, API skeleton, configuration, migrations, CI, health checks | **Core implemented; verification open** | Clean-database migration upgrade/downgrade and bounded readiness timeouts |
+| 1 — Authentication | Auth service, secure credentials, access/refresh lifecycle | **Core journey implemented; security proof open** | Negative, reuse, concurrency, and secret/logging tests listed above |
+| 2 — Profiles and posts | User profiles, post lifecycle, ownership and visibility | **Implemented; edge-case proof open** | More PostgreSQL authorization, visibility, and pagination tests |
+| 3 — Social graph and chronological feed | Follow/block, privacy, PostgreSQL feed and cursor pagination | **Implemented; hardening and measurement open** | Follow/block race semantics, feed edge cases, query plans and latency baseline |
+| 4 — Media lifecycle | Direct upload, object storage, validation, image variants and delivery | **Core lifecycle implemented; cleanup proof open** | MinIO cleanup deletion-failure/retry integration coverage |
+| 5 — Engineering quality and performance baseline | Observability, timeouts, migrations, load tests and reproducible measurements | **In progress / not complete** | Telemetry, migration proof, realistic benchmark dataset, load tests and baseline report |
+| 6 — Engagement and notifications | Likes, comments, event contract, outbox, consumers and notifications | **In progress** | Likes PR #16 is still a feature branch; validate and merge it, then add comments; event-driven notifications remain later work |
+| 7 — Feed scaling and hybrid fan-out | Redis timelines, fan-out workers, celebrity pull path, repair/backfill | **Not started; intentionally deferred** | Start only after Milestone 5 establishes a trustworthy PostgreSQL baseline |
+| 8 — Search and ranking v1 | Search index, candidate scoring, explainable ranking | **Not started; intentionally deferred** | Begin after core engagement and feed measurements |
+| 9 — Scale, resilience and advanced studies | Failure drills, capacity, recovery, CDN and architecture evolution | **Not started; future study milestone** | Select experiments based on measured bottlenecks and learning goals |
+
+**Important status rule:** a feature on an open PR or feature branch is not counted as implemented on `main`. In particular, likes are not yet part of the default-branch product until PR #16 is reviewed, validated, and merged. Likewise, a feature being present does not mean its production-scale behavior has been demonstrated.
+
+### Traceability: original diagram regions → delivery milestones
+
+| Original architecture region | Milestones | Planned progression |
+|---|---|---|
+| **1. Clients** — iOS, Android, web | 0–6 | Build and validate the React web journey first. Native clients are future clients of the same versioned API, not an MVP requirement. |
+| **2. Edge and traffic** — DNS, CDN, WAF/DDoS, load balancer, API gateway | 0, 9 | Keep the current API entry point and local proxy simple. Add deployment edge protections, CDN and traffic management as deployment and scale exercises. |
+| **3. Application services** — auth, profile, media, post, story, likes/comments, social graph, feed, ranking, search, notifications | 1–8 | Implement core domains as modules in the modular monolith. Stories, ranking, search and notifications are later slices; do not split modules into microservices by default. |
+| **4. Data storage** — PostgreSQL/MySQL, object storage, NoSQL, graph store, Redis, feature store, search index | 0–8 | PostgreSQL remains the source of truth; MinIO stores media bytes. Add Redis timelines, a search index or feature store only in the milestone that needs them. Cassandra/NoSQL and a separate graph database are optional studies, not commitments. |
+| **5. Media upload and processing pipeline** — presigned upload, queue, workers, transforms, metadata, object storage, CDN | 4, 6, 7, 9 | The current image path is direct upload plus synchronous processing and retryable cleanup. Durable workers/queue, video transcoding and CDN delivery are later evolutions. |
+| **6. Feed generation — hybrid fan-out** — post events, follower lookup, push/pull candidates, filtering, ranking, hydration | 3, 7, 8 | First deliver a correct chronological PostgreSQL feed. Then benchmark; only then add Redis fan-out-on-write and the high-follower pull path. Ranking follows candidate generation and evaluation. |
+| **7. Kafka / event streaming bus** | 6–7 | Introduce an event contract and transactional outbox before a broker. Use at-least-once delivery, idempotent consumers, retries and replay; do not promise end-to-end exactly-once behavior. |
+| **8. Async processing** — feed fan-out, media, notifications, search, counters, moderation, analytics | 4, 6–9 | Keep image processing synchronous while it is adequate. Add durable asynchronous consumers for notifications, fan-out, indexing and analytics only when their durability/throughput requirements justify them. |
+| **9. Analytics and machine learning** — event streams, warehouse, training, recommendations, content ranking, abuse detection | 8–9 | Start with measured product events and explainable ranking experiments. A warehouse, model training and feature store are advanced extensions, not MVP dependencies. |
+
+### Architecture principles carried forward from the original blueprint
+
+- **Correctness before distribution:** prove domain invariants in PostgreSQL before introducing derived timelines, caches or event consumers.
+- **Source of truth versus projections:** PostgreSQL owns durable product state; Redis timelines, search indexes, counters and analytics are rebuildable projections.
+- **Visibility before ranking:** private-account, block, deletion and account-status rules must be enforced before content is delivered or ranked.
+- **Bounded and retryable work:** uploads, cleanup, event consumers and fan-out need idempotency, limits, observable failures and recovery paths.
+- **Measure before optimizing:** record query plans, latency, throughput, data shape and write amplification before adopting caching or hybrid fan-out.
+- **Modular monolith first:** preserve router/service/repository boundaries and explicit module contracts. A box in the target diagram does not imply a separately deployed service.
+- **MVP finish line:** a user can register, manage a profile, follow accounts, upload and publish images, receive a visibility-correct feed, like and comment, and complete those journeys through the web client with automated tests. Notifications and distributed scale infrastructure are not required to call this first product milestone complete.
+
+### Next milestone sequence
+
+1. **Close Milestone 5's correctness gates alongside feature work:** keep CI green, validate clean migrations, expand auth/feed/social-graph/media failure tests, and capture the first reproducible performance baseline.
+2. **Finish Milestone 6's MVP engagement slice:** validate and merge likes, hydrate like state/count in feed and profile responses, build the React like interaction, then implement comments and their UI.
+3. **Run the complete product journey:** exercise multiple users, public/private accounts, follow requests, blocks, media upload/retry, feed pagination, likes and comments from the browser against PostgreSQL and MinIO.
+4. **Close the MVP with evidence:** document test results, known limitations, setup/recovery instructions and a short architecture retrospective.
+5. **Only then choose a scale experiment:** Redis hybrid fan-out is the natural next experiment from the original diagram, but it starts only if the PostgreSQL feed measurements provide a reason.
+
 ## Weekly / milestone log template
 
 Copy this entry when closing a milestone:
