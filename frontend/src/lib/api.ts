@@ -107,7 +107,7 @@ async function request<T>(
     throw new Error(errorMessage(payload, `Request failed (${response.status})`));
   }
 
-  if (response.status === 204) return undefined as T;
+  if (response.status === 204 || response.status === 202) return undefined as T;
   return (await response.json()) as T;
 }
 
