@@ -18,9 +18,7 @@ class LikeRepository(Protocol):
 
     async def remove(self, user_id: UUID, post_id: UUID) -> bool: ...
 
-    async def count_for_post(self, post_id: UUID) -> int: ...
-
-    async def exists(self, user_id: UUID, post_id: UUID) -> bool: ...
+    async def get_status(self, user_id: UUID, post_id: UUID) -> tuple[bool, int]: ...
 
 
 class LikeRow(Base):
@@ -68,17 +66,11 @@ class SqlAlchemyLikeRepository:
         )
         return result.rowcount > 0
 
-    async def count_for_post(self, post_id: UUID) -> int:
-        count = await self._session.scalar(
-            select(func.count()).select_from(LikeRow).where(LikeRow.post_id == post_id)
-        )
-        return int(count or 0)
-
-    async def exists(self, user_id: UUID, post_id: UUID) -> bool:
-        result = await self._session.scalar(
-            select(LikeRow.user_id).where(
-                LikeRow.user_id == user_id,
-                LikeRow.post_id == post_id,
-            )
-        )
-        return result is not None
+    async def get_status(self, user_id: UUID, post_id: UUID) -> tuple[bool, int]:
+        # One aggregate query gives the count and viewer state from one DB snapshot.
+        statement = select(
+            func.coalesce(func.bool_or(LikeRow.user_id == user_id), False),
+            func.count(LikeRow.user_id),
+        ).where(LikeRow.post_id == post_id)
+        liked, like_count = (await self._session.execute(statement)).one()
+        return bool(liked), int(like_count)
