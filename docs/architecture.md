@@ -7,6 +7,16 @@ local S3-compatible object store for private media bytes. Redpanda, Prometheus,
 and Grafana are available in the local Compose environment for later roadmap
 phases; their presence does not mean the application already depends on them.
 
+## Architecture decision records
+
+The durable trade-offs are indexed in [`docs/adr/README.md`](adr/README.md). In particular:
+- [ADR 0001](adr/0001-modular-monolith.md) records the modular-monolith boundary.
+- [ADR 0002](adr/0002-id-strategy.md) records UUIDv7 identifier generation.
+- [ADR 0003](adr/0003-authentication-tokens.md) records access/refresh token behavior and the current browser-storage hardening gap.
+- [ADR 0004](adr/0004-image-media-lifecycle.md) records image upload, processing, delivery, and retry boundaries.
+- [ADR 0005](adr/0005-likes-relationship.md) records idempotent likes.
+- [ADR 0006](adr/0006-postgresql-chronological-feed.md) records the PostgreSQL chronological feed baseline.
+
 ## Repository boundaries
 
 - `backend/app/api`: HTTP routers and API versioning
@@ -26,7 +36,7 @@ the backend through the versioned HTTP API; it does not import backend code.
 ## Media architecture
 
 The image lifecycle is implemented in the active `backend/` application. See
-[ADR 0002: Image media upload and delivery lifecycle](adr/0002-image-media-lifecycle.md)
+[ADR 0004: Image media upload and delivery lifecycle](adr/0004-image-media-lifecycle.md)
 for the full rationale, API contract, state transitions, failure boundaries,
 and follow-up work.
 
@@ -48,9 +58,7 @@ Key decisions:
 - Cleanup is a retryable scheduled job. It claims rows as DELETING, deletes
   objects idempotently, and removes metadata only after successful deletion.
 
-Image processing currently runs synchronously during completion. A durable
-worker/outbox, stale-PROCESSING recovery, and broader failure-path tests are
-deliberately follow-up work rather than claims of the current implementation.
+Image processing currently runs synchronously during completion. PR #14 added failure-path coverage for invalid content, missing expired uploads, transient storage-read failures, and partial variant writes. The current transaction rolls back an uncommitted PROCESSING state, so a stale-PROCESSING sweeper is not part of this design. Cleanup deletion-failure/retry integration coverage, operational metrics, and any durable worker/outbox remain follow-up work. See ADR 0004 for the current failure and retry contract.
 
 ## Local development
 

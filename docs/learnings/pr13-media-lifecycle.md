@@ -151,7 +151,7 @@ class ObjectStorage(Protocol):
 ### Decision: ImageMagick over Pillow
 
 > [!NOTE]
-> This was a deliberate ADR decision. See `docs/adr/0002-image-media-lifecycle.md` §"Use ImageMagick via subprocess for image validation and processing."
+> This was a deliberate ADR decision. See `docs/adr/0004-image-media-lifecycle.md` §"Use ImageMagick via subprocess for image validation and processing."
 
 | | Pillow | ImageMagick |
 | :--- | :--- | :--- |

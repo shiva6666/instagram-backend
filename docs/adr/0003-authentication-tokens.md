@@ -1,20 +1,12 @@
 # ADR 0003: Use short-lived JWT access tokens and rotating opaque refresh tokens
 
-- **Status:** Accepted
-- **Date:** 2026-11-10
+- **Status:** Accepted; browser transport is an MVP compromise requiring production hardening
+- **Originally accepted:** 2026-11-10
+- **Reviewed:** 2026-11-24
 
 ## Context
 
-The first client is expected to be a native/mobile client. It needs a compact
-credential for authenticated API calls, a way to continue a session without
-asking for a password frequently, and a server-side way to end a session when a
-refresh credential is revoked or appears to have been stolen.
-
-Access credentials and long-lived session credentials have different security
-properties. A self-contained access token avoids a database lookup on every
-request, while a long-lived self-contained token would be difficult to revoke
-promptly. Browser cookie transport has different CSRF and origin requirements
-from native-client storage.
+The application needs authenticated API calls, session continuity without repeatedly asking for a password, and a server-side way to end a session when a refresh credential is revoked or appears stolen. The repository now has a React browser client as well as a versioned API. Access credentials and long-lived session credentials have different security properties: a self-contained access token avoids a database lookup for token validity on every request, while a long-lived self-contained token would be difficult to revoke promptly.
 
 ## Decision
 
@@ -51,16 +43,13 @@ with the successor. Two devices or requests using the same old token may be
 treated as reuse and revoke the family; this is an intentional security versus
 concurrent-client trade-off.
 
-### Client storage and transport
+### Client storage and transport — current implementation and security gap
 
-The current API returns access and refresh tokens in JSON. Native clients must
-keep the refresh token only in platform secure storage, such as Keychain or
-Keystore, and should avoid logging either credential.
+The API currently returns both access and refresh tokens in JSON. The React web client stores both values in `localStorage` under `frame.access` and `frame.refresh`, attaches the access token as a Bearer token, and rotates the refresh token through the refresh endpoint. The API client shares one in-flight refresh promise within the current JavaScript runtime so concurrent requests in that tab do not independently rotate the same token.
 
-Browser clients are not a supported production transport yet. Before one is
-introduced, move the refresh token to an `HttpOnly`, `Secure`, appropriately
-scoped `SameSite` cookie and add CSRF and origin protections. Do not put refresh
-tokens in browser local storage.
+This is the implemented MVP behavior, not the preferred production browser security design. JavaScript-accessible local storage means an XSS vulnerability can expose both credentials. The in-memory single-flight guard is not a cross-tab or cross-device coordination mechanism; simultaneous refreshes from separate contexts can still trigger the server's reuse policy.
+
+Before production browser deployment, move the refresh credential to an `HttpOnly`, `Secure`, appropriately scoped `SameSite` cookie and add CSRF and origin protections. Revisit access-token transport at the same time. Do not describe the current localStorage implementation as secure against XSS. Native clients are not currently implemented; if added, they should store refresh credentials in platform secure storage such as Keychain or Keystore.
 
 ## Alternatives considered
 
@@ -69,9 +58,7 @@ tokens in browser local storage.
 - **Opaque access tokens with a database lookup:** immediate revocation is
   simpler, but every protected request requires a session lookup. This is not
   needed for the first baseline.
-- **Cookie-only browser sessions:** suitable for a browser-first product, but
-  requires CSRF/origin controls and does not meet the current native-client
-  transport decision.
+- **HttpOnly cookie for browser refresh tokens:** preferred production browser direction, but requires CSRF/origin protections and a coordinated API/client change. Deferred in the current learning MVP; localStorage is implemented as a temporary compromise.
 - **Asymmetric JWT signing now:** useful when independent verifiers need public
   keys, but adds key-distribution and rotation complexity before it is needed.
 
@@ -88,8 +75,8 @@ tokens in browser local storage.
 
 ## Revisit when
 
-- Browser clients, multiple devices/session management, OIDC, MFA, or password
-  reset are added.
+- The browser client moves from localStorage to cookie-based refresh-token transport.
+- Multiple devices/session management, OIDC, MFA, or password reset are added.
 - Immediate access-token revocation, signing-key rotation, or independently
   deployed token verifiers are required.
 - Measurements show protected-route user lookups need a different approach.

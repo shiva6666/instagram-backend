@@ -43,4 +43,4 @@ If decoding or conversion fails, the service records a bounded failure reason an
 - `backend/app/modules/media/service.py` — object metadata checks and orchestration of the processor and storage writes.
 - `backend/tests/modules/media/test_processing.py` — focused processing behavior.
 
-The current integration test uses a small valid PNG and checks the full path through processed WebP delivery. Failure-path MinIO integration tests are follow-up work; see the [media lifecycle decision](../adr/0002-image-media-lifecycle.md).
+The integration tests cover the successful upload-to-feed path plus invalid content, transient object-read failure/retry, and partial variant-write/retry. Cleanup deletion-failure/retry remains follow-up work; see the [media lifecycle decision](../adr/0004-image-media-lifecycle.md).

@@ -1,14 +1,15 @@
-# ADR 0002: Image media upload and delivery lifecycle
+# ADR 0004: Image media upload and delivery lifecycle
 
-- **Status:** Accepted; implemented in PR #13
-- **Date:** 2026-11-16
+- **Status:** Accepted; core lifecycle implemented in PR #13 and reliability hardening in PR #14
+- **Originally accepted:** 2026-11-16
+- **Reviewed:** 2026-11-24
 - **Scope:** Image uploads and delivery in the active `backend/` application
 
 ## Context
 
 The original post API accepted image URLs. That leaves file ownership, validation, storage, processing, and safe delivery outside the backend's control. The product needs a direct-upload flow that does not proxy large image bodies through FastAPI, while preserving existing URL-based posts.
 
-PR #11 introduced an initial media foundation in the repository-root duplicate application. PR #13 closes the integration gap by implementing the complete lifecycle in the active `backend/` application used by the Dockerfile, CI, Makefile, and development launcher. The decisions below describe the active application.
+PR #11 introduced an initial media foundation in the repository-root duplicate application. PR #13 implemented the complete lifecycle in the active `backend/` application used by the Dockerfile, CI, Makefile, and development launcher. PR #14 then added reliability tests for invalid content, expired uploads with no object, transient storage-read failure, and partial variant writes. The decisions below describe the active application.
 
 ## Decisions
 
@@ -159,18 +160,21 @@ sequenceDiagram
 
 - Image processing is synchronous inside upload completion in this first vertical slice. It is bounded, but slow processing holds the request open and may hold a database row lock/transaction while storage and processing work occurs.
 - PostgreSQL cannot atomically commit object writes. A failure after setting `PROCESSING` or after writing only one variant can leave partial state/objects.
-- The current happy-path MinIO end-to-end test does not prove every storage outage, malformed payload, expired URL, and retry scenario.
+- PR #14 adds MinIO-backed coverage for invalid image bytes, transient object-read failure with rollback/retry, and partial variant write/retry, plus a service test for an expired upload with no object. These tests do not prove every possible storage outage or operational failure.
+- Cleanup deletion-failure/retry still lacks MinIO-backed integration coverage.
 - Signed URLs are bearer capabilities until expiry; their TTL must remain short and they must not be logged.
 
 ## Follow-up work
 
-1. Add MinIO-backed failure-path tests for invalid payloads, wrong size/content type, expired upload URL, storage outage, partial variant write, retry, and cleanup failure.
-2. Add an explicit recovery path for stale `PROCESSING` records and partial processed objects.
-3. Move image processing to a durable worker when traffic/latency justifies it. If moved, persist the processing request transactionally (e.g. outbox) and make the worker idempotent.
-4. Revisit row-lock and transaction duration so external object-storage and image-processing calls do not hold a database transaction open longer than necessary.
-5. Add operational metrics for pending/processing/failed/deleting counts, processing duration, cleanup backlog, and storage errors.
-6. Add frontend upload UX (progress, retry, status polling) against the API contract.
+1. Add MinIO-backed cleanup deletion-failure/retry integration coverage. The DELETING claim is committed before object-storage calls, and failed deletion should leave the row available for a later retry; this is the remaining explicit reliability-test gap.
+2. Revisit row-lock and transaction duration so external object-storage and image-processing calls do not hold a database transaction open longer than necessary. Any redesign must preserve the retry and ownership invariants.
+3. Add operational metrics for pending, processing, failed, and deleting counts; processing duration; cleanup backlog; and storage errors.
+4. Move image processing to a durable worker only when latency/throughput or availability requirements justify it. That future design needs a committed claim/lease or transactional outbox, idempotent processing, lease recovery, bounded retries, and observability. A stale-PROCESSING sweeper is **not** required by the current synchronous transaction design because PROCESSING is not committed separately before work begins.
+5. Video transcoding, global CDN delivery, and multi-region object replication remain deferred scale/product work.
 
-## Validation recorded for PR #13
+## Validation recorded through PRs #13–#15
 
-The PR reports green CI for Ruff, formatting, mypy, migrations, backend tests, frontend typecheck/build, and a MinIO-backed upload-to-feed end-to-end test. Failure-path MinIO integration coverage remains follow-up work.
+- PR #13 implemented the active backend lifecycle and MinIO-backed upload-to-feed happy path.
+- PR #14 added MinIO-backed tests for invalid image content, transient read failure with retry, and partial variant write with retry, plus a service test for an expired upload whose object never arrived.
+- PR #15 integrated the browser upload and profile-management flows.
+- Cleanup deletion-failure/retry remains an explicitly unproven integration case. This ADR does not claim every operational or production-scale failure mode is covered.
