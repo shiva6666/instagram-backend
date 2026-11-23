@@ -77,7 +77,7 @@ make typecheck
 make migrate
 ```
 
-For backend-specific setup and commands, see [backend/README.md](backend/README.md). For frontend-specific details, see [frontend/README.md](frontend/README.md).
+For the canonical backend layout and end-to-end request flow, see [Repository layout and data flow](docs/architecture/repository-layout-and-data-flow.md). For backend-specific setup and commands, see [backend/README.md](backend/README.md). For frontend-specific details, see [frontend/README.md](frontend/README.md).
 
 ## Learning path
 
