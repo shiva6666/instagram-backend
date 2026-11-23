@@ -26,7 +26,7 @@ the backend through the versioned HTTP API; it does not import backend code.
 ## Media architecture
 
 The image lifecycle is implemented in the active `backend/` application. See
-[ADR 0002: Image media upload and delivery lifecycle](adr/0002-image-media-lifecycle.md)
+[ADR 0004: Image media upload and delivery lifecycle](adr/0004-image-media-lifecycle.md)
 for the full rationale, API contract, state transitions, failure boundaries,
 and follow-up work.
 
@@ -48,9 +48,7 @@ Key decisions:
 - Cleanup is a retryable scheduled job. It claims rows as DELETING, deletes
   objects idempotently, and removes metadata only after successful deletion.
 
-Image processing currently runs synchronously during completion. A durable
-worker/outbox, stale-PROCESSING recovery, and broader failure-path tests are
-deliberately follow-up work rather than claims of the current implementation.
+Image processing currently runs synchronously during completion. PR #14 added failure-path coverage for invalid content, missing expired uploads, transient storage-read failures, and partial variant writes. The current transaction rolls back an uncommitted PROCESSING state, so a stale-PROCESSING sweeper is not part of this design. Cleanup deletion-failure/retry integration coverage, operational metrics, and any durable worker/outbox remain follow-up work. See ADR 0004 for the current failure and retry contract.
 
 ## Local development
 
