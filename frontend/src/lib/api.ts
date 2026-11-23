@@ -11,6 +11,7 @@ import type {
   MediaUploadTicket,
   MediaStatus,
   OwnProfile,
+  FollowPage,
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -96,7 +97,7 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 204) return undefined as T;
+    if (response.status === 204 || response.status === 202) return undefined as T;
     let payload: ApiError = {};
     try {
       payload = (await response.json()) as ApiError;
@@ -204,4 +205,11 @@ export const api = {
     }),
   counts: (username: string) =>
     request<FollowCounts>(`/follows/${encodeURIComponent(username)}/counts`),
+  followList: (username: string, connection: "followers" | "following", limit = 20, cursor?: string) => {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+    return request<FollowPage>(
+      `/follows/${encodeURIComponent(username)}/${connection}?${query.toString()}`,
+    );
+  },
 };
