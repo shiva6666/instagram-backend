@@ -63,11 +63,11 @@ class FakeLikeRepository:
         self.likes.remove(key)
         return True
 
-    async def count_for_post(self, post_id: UUID) -> int:
-        return sum(liked_post_id == post_id for _, liked_post_id in self.likes)
-
-    async def exists(self, user_id: UUID, post_id: UUID) -> bool:
-        return (user_id, post_id) in self.likes
+    async def get_status(self, user_id: UUID, post_id: UUID) -> tuple[bool, int]:
+        return (
+            (user_id, post_id) in self.likes,
+            sum(liked_post_id == post_id for _, liked_post_id in self.likes),
+        )
 
 
 def make_service() -> tuple[LikeService, FakeLikeRepository, FakePostService, User, UUID]:
