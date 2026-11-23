@@ -176,7 +176,7 @@ export const api = {
   mediaStatus: (mediaId: string) => request<MediaStatus>(`/media/${mediaId}`),
   discardMedia: (mediaId: string) =>
     request<void>(`/media/${mediaId}`, { method: "DELETE" }),
-  updateMyProfile: (input: { bio?: string | null; is_private?: boolean }) =>
+  updateMyProfile: (input: { bio?: string; is_private?: boolean }) =>
     request<OwnProfile>("/users/me", {
       method: "PATCH",
       body: JSON.stringify(input),
