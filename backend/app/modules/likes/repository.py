@@ -14,11 +14,15 @@ from app.core.db import Base
 
 
 class LikeRepository(Protocol):
-    async def add(self, user_id: UUID, post_id: UUID, created_at: datetime) -> bool: ...
+    async def add(
+        self, user_id: UUID, post_id: UUID, created_at: datetime
+    ) -> bool: ...
 
     async def remove(self, user_id: UUID, post_id: UUID) -> bool: ...
 
-    async def get_status(self, user_id: UUID, post_id: UUID) -> tuple[bool, int]: ...
+    async def get_status(
+        self, user_id: UUID, post_id: UUID
+    ) -> tuple[bool, int]: ...
 
 
 class LikeRow(Base):
