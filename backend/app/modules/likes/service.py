@@ -20,8 +20,7 @@ class LikeService:
         await self._posts.get_post(post_id=post_id, viewer=actor)
 
     async def _status(self, *, post_id: UUID, actor: User) -> LikeStatus:
-        liked = await self._likes.exists(actor.id, post_id)
-        like_count = await self._likes.count_for_post(post_id)
+        liked, like_count = await self._likes.get_status(actor.id, post_id)
         return LikeStatus(post_id=post_id, liked=liked, like_count=like_count)
 
     async def get_status(self, *, post_id: UUID, actor: User) -> LikeStatus:
