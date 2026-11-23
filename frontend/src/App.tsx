@@ -4,6 +4,7 @@ import { AppLayout } from "./components/AppLayout";
 import { AuthPage } from "./pages/AuthPage";
 import { CreatePostPage } from "./pages/CreatePostPage";
 import { ExplorePage } from "./pages/ExplorePage";
+import { EditProfilePage } from "./pages/EditProfilePage";
 import { FeedPage } from "./pages/FeedPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/" element={<FeedPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/create" element={<CreatePostPage />} />
+        <Route path="/settings/profile" element={<EditProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
