@@ -150,18 +150,14 @@ erDiagram
 
 ## 2. Current repository context
 
-The current repository has a modular-monolith architecture:
+The current repository has a modular-monolith architecture with one canonical Python project under `backend/`:
 
-- \`app/main.py\` creates the FastAPI application and includes the API router.
-- \`app/api/router.py\` currently includes the health router; authentication routes are not wired yet.
-- \`backend/app/core/config.py\` owns application configuration.
-- \`backend/app/core/db.py\` owns the async SQLAlchemy engine/session infrastructure.
-- \`backend/app/modules/users/models.py\` defines an immutable domain \`User\` dataclass.
-- \`backend/app/modules/users/repository.py\` contains the users repository port and SQLAlchemy adapter/\`UserRow\`.
-- The current users table stores profile/account fields, not password credentials.
-- The roadmap lists JWT access/refresh tokens and Argon2 hashing in Week 2.
+- `backend/app/main.py` creates the FastAPI application and mounts the composed API router under the configured `/api/v1` prefix.
+- `backend/app/api/router.py` includes health, auth, users, posts, likes, media, follows, and feed routers.
+- `backend/app/core/config.py` owns application configuration; `backend/app/core/db.py` owns async SQLAlchemy engine/session infrastructure.
+- Domain modules live under `backend/app/modules/`; tests and migrations live under `backend/tests/` and `backend/migrations/`.
+- Authentication is implemented. This note's earlier proposed architecture diagrams remain learning material; they are not a statement that authentication is still pending.
 
-The existing separation between domain objects, services, repositories, and SQLAlchemy rows is a useful foundation. Authentication should follow those boundaries rather than bypassing them.
 
 ---
 
