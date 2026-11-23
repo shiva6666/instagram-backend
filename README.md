@@ -15,15 +15,15 @@ The target architecture is broader than the current implementation. PostgreSQL i
 ## Current repository layout
 
 ```text
-backend/       FastAPI application, domain modules, tests, migrations, Python tooling
+backend/       The single FastAPI application, domain modules, tests, migrations, scripts, and Python tooling
 frontend/      React + TypeScript + Vite web application
 docs/          Architecture decisions and learning notes
 infra/         Monitoring configuration
 docker-compose.yml  Local infrastructure orchestration
-Makefile       Root-level development commands
+Makefile       Root-level commands that delegate backend work to backend/
 ```
 
-The backend is a modular monolith. Domain modules live under `backend/app/modules/` and follow router/service/repository boundaries. The media module uses private MinIO/S3 object storage for direct image uploads, server-side processing, and short-lived signed delivery URLs. The likes module provides authenticated, idempotent like/unlike operations backed by PostgreSQL. The frontend consumes the versioned API through the Vite development proxy.
+The backend has one canonical Python project rooted at `backend/`. Its entry point is `backend/app/main.py`; API registration is in `backend/app/api/router.py`; domain modules live under `backend/app/modules/` and follow router/service/repository boundaries. There is intentionally no second root-level `app/`, `tests/`, `scripts/`, `pyproject.toml`, `uv.lock`, `Dockerfile`, or `alembic.ini`. The media module uses private MinIO/S3 object storage for direct image uploads, server-side processing, and short-lived signed delivery URLs. The likes module provides authenticated, idempotent like/unlike operations backed by PostgreSQL. The frontend consumes the versioned API through the Vite development proxy.
 
 ## Requirements
 
