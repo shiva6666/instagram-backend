@@ -10,6 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.modules.media.storage.interfaces import ObjectStorageError
+from app.modules.media.storage.s3 import S3CompatibleStorage
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("RUN_MEDIA_INTEGRATION_TESTS") != "1",
@@ -104,3 +106,128 @@ def test_upload_process_attach_and_read_media_end_to_end() -> None:
             headers=headers,
         )
         assert discarded.status_code == 409
+
+
+
+def _upload_image(client: TestClient, headers: dict[str, str], image_bytes: bytes) -> str:
+    ticket_response = client.post(
+        "/api/v1/media/upload-url",
+        headers=headers,
+        json={"content_type": "image/png", "size_bytes": len(image_bytes)},
+    )
+    assert ticket_response.status_code == 201, ticket_response.text
+    ticket = ticket_response.json()
+
+    upload_request = Request(
+        ticket["upload_url"],
+        data=image_bytes,
+        headers={"Content-Type": "image/png"},
+        method="PUT",
+    )
+    with urlopen(upload_request, timeout=10) as upload_response:
+        assert upload_response.status in {200, 201}
+    return ticket["media_id"]
+
+
+def test_invalid_image_content_is_recorded_as_failed() -> None:
+    invalid_image = b"\x89PNG\r\n\x1a\nthis-is-not-a-valid-png"
+    with TestClient(app) as client:
+        headers = {"Authorization": f"Bearer {_register(client)}"}
+        media_id = _upload_image(client, headers, invalid_image)
+
+        completed = client.post(
+            f"/api/v1/media/{media_id}/complete",
+            headers=headers,
+        )
+
+        assert completed.status_code == 200, completed.text
+        assert completed.json()["status"] == "failed"
+        assert completed.json()["failure_reason"]
+
+
+def test_storage_read_failure_rolls_back_and_completion_can_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image_bytes = _png_bytes()
+    with TestClient(app, raise_server_exceptions=False) as client:
+        headers = {"Authorization": f"Bearer {_register(client)}"}
+        media_id = _upload_image(client, headers, image_bytes)
+
+        original_get = S3CompatibleStorage.get_object
+        attempts = 0
+
+        async def fail_once(
+            storage: S3CompatibleStorage, object_key: str, *, max_bytes: int
+        ) -> bytes:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise ObjectStorageError("simulated temporary storage outage")
+            return await original_get(storage, object_key, max_bytes=max_bytes)
+
+        monkeypatch.setattr(S3CompatibleStorage, "get_object", fail_once)
+
+        first_attempt = client.post(
+            f"/api/v1/media/{media_id}/complete",
+            headers=headers,
+        )
+        assert first_attempt.status_code == 500
+
+        after_failure = client.get(f"/api/v1/media/{media_id}", headers=headers)
+        assert after_failure.status_code == 200
+        assert after_failure.json()["status"] == "pending"
+
+        retry = client.post(
+            f"/api/v1/media/{media_id}/complete",
+            headers=headers,
+        )
+        assert retry.status_code == 200, retry.text
+        assert retry.json()["status"] == "ready"
+        assert attempts == 2
+
+
+def test_partial_variant_write_is_safe_to_retry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    image_bytes = _png_bytes()
+    with TestClient(app, raise_server_exceptions=False) as client:
+        headers = {"Authorization": f"Bearer {_register(client)}"}
+        media_id = _upload_image(client, headers, image_bytes)
+
+        original_put = S3CompatibleStorage.put_object
+        attempts = 0
+
+        async def fail_second_variant(
+            storage: S3CompatibleStorage,
+            object_key: str,
+            data: bytes,
+            *,
+            content_type: str,
+        ) -> None:
+            nonlocal attempts
+            attempts += 1
+            if attempts == 2:
+                raise ObjectStorageError("simulated failure writing thumbnail")
+            await original_put(
+                storage, object_key, data, content_type=content_type
+            )
+
+        monkeypatch.setattr(S3CompatibleStorage, "put_object", fail_second_variant)
+
+        first_attempt = client.post(
+            f"/api/v1/media/{media_id}/complete",
+            headers=headers,
+        )
+        assert first_attempt.status_code == 500
+
+        after_failure = client.get(f"/api/v1/media/{media_id}", headers=headers)
+        assert after_failure.status_code == 200
+        assert after_failure.json()["status"] == "pending"
+
+        retry = client.post(
+            f"/api/v1/media/{media_id}/complete",
+            headers=headers,
+        )
+        assert retry.status_code == 200, retry.text
+        assert retry.json()["status"] == "ready"
+        assert attempts == 4
