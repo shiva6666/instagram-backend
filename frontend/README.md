@@ -25,6 +25,7 @@ Open <http://localhost:5173>. Vite proxies `/api` to the backend, avoiding the n
 - Authenticated home feed with cursor-based load more
 - User profile and post list
 - Follow / unfollow and relationship state
+- Paginated follower and following lists
 - Create posts with up to 10 direct-to-object-storage image uploads (JPEG, PNG, WebP; 10 MB each)
 - Verify and process uploads through the media API before attaching media IDs to posts
 - Retry transient completion failures without re-uploading an already transferred original
