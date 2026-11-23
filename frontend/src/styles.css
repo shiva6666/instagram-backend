@@ -182,3 +182,12 @@ h1 { margin: 7px 0 0; font: 500 38px/1.1 var(--serif); letter-spacing: -.7px; }
 @media (max-width: 420px) {
   .upload-grid { grid-template-columns: 1fr; }
 }
+
+.connection-eyebrow { display: block; margin-top: 28px; }
+.connection-list { display: grid; margin-top: 24px; border-top: 1px solid var(--line); }
+.connection-row { display: flex; align-items: center; gap: 12px; padding: 14px 5px; border-bottom: 1px solid var(--line); }
+.connection-row > div:last-child { display: grid; gap: 4px; min-width: 0; }
+.connection-row strong { font-size: 12px; }
+.connection-row span { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.profile-stats a { color: inherit; }
+.profile-stats a:hover { color: var(--green); }
