@@ -8,12 +8,6 @@
 
 The application needs authenticated API calls, session continuity without repeatedly asking for a password, and a server-side way to end a session when a refresh credential is revoked or appears stolen. The repository now has a React browser client as well as a versioned API. Access credentials and long-lived session credentials have different security properties: a self-contained access token avoids a database lookup for token validity on every request, while a long-lived self-contained token would be difficult to revoke promptly.
 
-Access credentials and long-lived session credentials have different security
-properties. A self-contained access token avoids a database lookup on every
-request, while a long-lived self-contained token would be difficult to revoke
-promptly. Browser cookie transport has different CSRF and origin requirements
-from native-client storage.
-
 ## Decision
 
 ### Access tokens
