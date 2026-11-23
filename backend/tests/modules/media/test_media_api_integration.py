@@ -108,7 +108,9 @@ def test_upload_process_attach_and_read_media_end_to_end() -> None:
         assert discarded.status_code == 409
 
 
-def _upload_image(client: TestClient, headers: dict[str, str], image_bytes: bytes) -> str:
+def _upload_image(
+    client: TestClient, headers: dict[str, str], image_bytes: bytes
+) -> str:
     ticket_response = client.post(
         "/api/v1/media/upload-url",
         headers=headers,
@@ -207,9 +209,7 @@ def test_partial_variant_write_is_safe_to_retry(
             attempts += 1
             if attempts == 2:
                 raise ObjectStorageError("simulated failure writing thumbnail")
-            await original_put(
-                storage, object_key, data, content_type=content_type
-            )
+            await original_put(storage, object_key, data, content_type=content_type)
 
         monkeypatch.setattr(S3CompatibleStorage, "put_object", fail_second_variant)
 
