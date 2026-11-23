@@ -8,6 +8,9 @@ import type {
   PublicProfile,
   TokenResponse,
   User,
+  MediaUploadTicket,
+  MediaStatus,
+  OwnProfile,
 } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
@@ -144,14 +147,39 @@ export const api = {
     if (cursor) query.set("cursor", cursor);
     return request<Page<Post>>(`/feed?${query.toString()}`);
   },
-  createPost: (caption: string, imageUrls: string[]) =>
+  createPost: (caption: string, mediaIds: string[]) =>
     request<Post>("/posts", {
       method: "POST",
       body: JSON.stringify({
-        caption: caption || null,
-        post_img_url: imageUrls.map((url) => ({ url })),
+        caption: caption.trim() || null,
+        media_ids: mediaIds,
         is_private: false,
       }),
+    }),
+  createMediaUpload: (contentType: string, sizeBytes: number) =>
+    request<MediaUploadTicket>("/media/upload-url", {
+      method: "POST",
+      body: JSON.stringify({ content_type: contentType, size_bytes: sizeBytes }),
+    }),
+  uploadMediaObject: async (uploadUrl: string, file: File, contentType: string) => {
+    const response = await fetch(uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: file,
+    });
+    if (!response.ok) {
+      throw new Error(`Image upload failed (${response.status})`);
+    }
+  },
+  completeMediaUpload: (mediaId: string) =>
+    request<MediaStatus>(`/media/${mediaId}/complete`, { method: "POST" }),
+  mediaStatus: (mediaId: string) => request<MediaStatus>(`/media/${mediaId}`),
+  discardMedia: (mediaId: string) =>
+    request<void>(`/media/${mediaId}`, { method: "DELETE" }),
+  updateMyProfile: (input: { bio?: string | null; is_private?: boolean }) =>
+    request<OwnProfile>("/users/me", {
+      method: "PATCH",
+      body: JSON.stringify(input),
     }),
   deletePost: (postId: string) =>
     request<void>(`/posts/${postId}`, { method: "DELETE" }),
