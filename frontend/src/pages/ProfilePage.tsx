@@ -89,8 +89,8 @@ export function ProfilePage() {
           </div>
           <div className="profile-stats">
             <span><strong>{posts.length}</strong> posts</span>
-            <span><strong>{counts?.followers ?? "—"}</strong> followers</span>
-            <span><strong>{counts?.following ?? "—"}</strong> following</span>
+            <Link to={`/profile/${encodeURIComponent(username)}/followers`}><strong>{counts?.followers ?? "—"}</strong> followers</Link>
+            <Link to={`/profile/${encodeURIComponent(username)}/following`}><strong>{counts?.following ?? "—"}</strong> following</Link>
           </div>
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
           {profile.is_private && <span className="private-label">Private account</span>}
