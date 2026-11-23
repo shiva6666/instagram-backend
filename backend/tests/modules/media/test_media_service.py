@@ -335,7 +335,6 @@ def test_complete_upload_allows_finalization_after_upload_url_expiry() -> None:
     assert completed.status == MediaStatus.READY
 
 
-
 def test_expired_upload_without_object_is_failed_and_scheduled_for_cleanup() -> None:
     repository = FakeMediaRepository()
     storage = FakeStorage()
