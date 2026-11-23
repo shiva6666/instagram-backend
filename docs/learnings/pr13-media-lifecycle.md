@@ -3,6 +3,8 @@
 > [!IMPORTANT]
 > This PR (merged from `feature/complete-media-lifecycle`) is the largest change to the backend so far: **40 files changed, 2,638 insertions, 92 deletions**. It introduces the entire image upload, processing, storage, delivery, and cleanup pipeline.
 
+For a step-by-step explanation, follow the [PR #13 chunk reading path](./README.md#pr-13-media-lifecycle-reading-path). This page remains the comprehensive reference.
+
 ---
 
 ## 1. What Was This PR About — The Problem It Solved
