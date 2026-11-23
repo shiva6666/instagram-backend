@@ -18,7 +18,7 @@ A user can register, authenticate, create a profile, follow other users, publish
 - Update the **Current repository status** section and checkboxes only after verifying code and tests on the default branch.
 - Use AI tools for review, test ideas, and boilerplate; understand and own the design and critical implementation.
 
-## Current repository status (verified against `main` on 2026-11-14)
+## Current repository status (main snapshot plus in-progress branch work; 2026-11-24)
 
 This status reflects the implemented modules, tests, and local workflows currently available. It does not claim that every edge case, deployment path, or performance target has been proven.
 
@@ -33,9 +33,9 @@ This status reflects the implemented modules, tests, and local workflows current
 | Follow graph | Implemented: public/private follows, requests, lists, counts, blocks, and PostgreSQL concurrency tests | Test races between follow operations and block changes; review query plans |
 | Social graph persistence | Present; follow and block rows are shared through the social-graph persistence module | Preserve clear module boundaries and avoid leaking ORM rows across modules |
 | Home feed | Implemented on `main`: PostgreSQL chronological feed with visibility filtering, cursor pagination, and batched image hydration | Expand edge-case coverage and record a query-plan/performance baseline |
-| Web frontend | React/Vite client integrated with `/api/v1` through the development proxy; auth, feed, profiles, follows, and URL-based posts are implemented | Add UI-level tests; likes, comments, direct uploads, and profile editing await backend APIs |
+| Web frontend | React/Vite client integrated with `/api/v1`; auth, feed, profiles, follows, direct media uploads, profile editing, and post publishing are implemented | Add UI-level tests and connect likes when the backend likes API is merged |
 | Local development and demo data | `make dev` starts the local stack; `make seed` creates 30 users, 180 posts, image metadata, 150 follows, and block relationships. Reruns and demo login were verified locally | Keep seed assumptions aligned with future performance datasets |
-| Media upload/processing | Core image lifecycle and MinIO-backed happy path implemented; reliability tests now cover invalid bytes and retry after transient/partial storage failures | Add cleanup deletion/retry integration coverage; keep durable workers deferred until justified |
+| Media upload/processing | Core image lifecycle and MinIO-backed happy path implemented; reliability tests cover invalid bytes and retry after transient/partial storage failures | Add cleanup deletion/retry integration coverage; keep durable workers deferred until justified |\n| Likes | MVP API and persistence implemented on `feature/likes-module`; not yet part of `main` | Complete PostgreSQL migration/API/concurrency integration tests, then add feed/profile like-summary hydration and frontend controls |
 
 ### Recently merged implementation slices
 

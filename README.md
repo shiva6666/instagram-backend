@@ -23,7 +23,7 @@ docker-compose.yml  Local infrastructure orchestration
 Makefile       Root-level development commands
 ```
 
-The backend is a modular monolith. Domain modules live under `backend/app/modules/` and follow router/service/repository boundaries. The media module uses private MinIO/S3 object storage for direct image uploads, server-side processing, and short-lived signed delivery URLs. The frontend consumes the versioned API through the Vite development proxy.
+The backend is a modular monolith. Domain modules live under `backend/app/modules/` and follow router/service/repository boundaries. The media module uses private MinIO/S3 object storage for direct image uploads, server-side processing, and short-lived signed delivery URLs. The likes module provides authenticated, idempotent like/unlike operations backed by PostgreSQL. The frontend consumes the versioned API through the Vite development proxy.
 
 ## Requirements
 
@@ -92,4 +92,4 @@ For backend-specific setup and commands, see [backend/README.md](backend/README.
 9. Observability, load testing, and reliability
 10. Analytics and recommendation experiments
 
-See the [project roadmap](Roadmap.md), [architecture overview](docs/architecture.md), [media lifecycle decision](docs/adr/0002-image-media-lifecycle.md), and [learning notes](docs/learnings/).
+See the [project roadmap](Roadmap.md), [architecture overview](docs/architecture.md), [media lifecycle decision](docs/adr/0002-image-media-lifecycle.md), and [learning notes](docs/learnings/), including the [likes relationship design](docs/learnings/likes-01-like-relationships.md).
