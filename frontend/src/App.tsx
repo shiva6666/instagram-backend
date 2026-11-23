@@ -6,6 +6,7 @@ import { CreatePostPage } from "./pages/CreatePostPage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { EditProfilePage } from "./pages/EditProfilePage";
 import { FeedPage } from "./pages/FeedPage";
+import { FollowListPage } from "./pages/FollowListPage";
 import { ProfilePage } from "./pages/ProfilePage";
 
 function ProtectedLayout() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/create" element={<CreatePostPage />} />
         <Route path="/settings/profile" element={<EditProfilePage />} />
         <Route path="/profile/:username" element={<ProfilePage />} />
+        <Route path="/profile/:username/:connection" element={<FollowListPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
