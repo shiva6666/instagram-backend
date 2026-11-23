@@ -116,12 +116,19 @@ export function CreatePostPage() {
       updateImage(current.id, current);
     }
 
+    if (!current.mediaId || !current.uploadUrl) {
+      throw new Error("Upload ticket is missing. Remove this image and select it again.");
+    }
+
     if (!current.uploaded) {
       await api.uploadMediaObject(current.uploadUrl, current.file, current.file.type);
       current = { ...current, uploaded: true, status: "Verifying and processing" };
       updateImage(current.id, current);
     }
 
+    if (!current.mediaId) {
+      throw new Error("Media upload could not be initialized.");
+    }
     const result = await api.completeMediaUpload(current.mediaId);
     if (result.status !== "ready") {
       throw new Error(result.failure_reason || `Image processing status: ${result.status}`);
